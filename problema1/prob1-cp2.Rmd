@@ -4,7 +4,9 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-dados <- read.csv("dados/alunosUFCGAnon.csv")
+library(dplyr)
+library(ggplot2)
+dados <- read.csv("../../dados/alunosUFCGAnon.csv", stringsAsFactors = F)
 ```
 
 
@@ -12,6 +14,13 @@ dados <- read.csv("dados/alunosUFCGAnon.csv")
 ###Análise Descritiva
 
 Nossa análise será voltada para o exploração e visualização de dados. Os dados utilizados nessa análise são referentes as disciplinas dos cursos da UFCG, por motivos de segurança os nomes dos alunos foram removidos e não tivemos acesso a essa informação, os dados contemplam o período de 2002 a 2014. 
+
+Vamos dar uma olhada nos nossos dados:
+
+```{r cars}
+str(dados)
+```
+
 Os dados representam uma visão do banco de dados do controle acadêmico da UFCG. Os campos são praticamente auto-explicativos, com excessão talvez dos seguintes campos que são explicados abaixo:
 
 Cod_Evasao = 0 se o aluno nao evadiu ao fim do primeiro periodo e 1 se ele evadiu.
@@ -19,7 +28,36 @@ Cod_Evasao = 0 se o aluno nao evadiu ao fim do primeiro periodo e 1 se ele evadi
 Credito_Curso = total de créditos necessários para o aluno concluir o curso.
 
 Periodo_Ingresso = periodo que o aluno entrou no curso.
-```{r cars}
-summary(cars)
-```
 
+
+```{r cars}
+#numero de alunos por curso na UFCG 2002 - 2014
+n_alunos_curso <- dados %>%
+  select(Matricula, Cod_Curso, Nome_Curso, Departamento, Periodo, Campus) %>%
+  distinct(Matricula, Cod_Curso, Nome_Curso, Campus) %>%
+  group_by(Nome_Curso, Cod_Curso, Campus, Periodo) %>%
+  summarise(n_alunos = n()) 
+
+ggplot(data=n_alunos_curso, aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos)) + 
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(title="Quantidade de Alunos por Curso \n UFCG (2002 - 2014)", x="Curso", y="Total de Alunos")
+
+```
+No gráfico acima temos uma visão geral da quantidade de alunos que já passaram pelos cursos da UFCG entre 2002 e 2014. Temos um total de 95 cursos espalhados por 9 campus. 
+
+Fazendo um corte nos nossos dados, escolhemos o curso de Ciência da Computação para termos um panorama geral sobre seu histórico. Conseguimos ver que com o passar dos anos o número de alunos no curso de 
+```{r cars}
+#Numero de alunos no curso de computação 2002 - 2014
+n_alunos_curso_CC <- dados %>%
+  filter(Cod_Curso == 14102100) %>%
+  select(Matricula, Cod_Curso, Nome_Curso, Departamento, Periodo, Campus) %>%
+  distinct(Matricula, Cod_Curso, Nome_Curso, Campus, Periodo) %>%
+  group_by(Nome_Curso, Cod_Curso, Campus, Periodo) %>%
+  summarise(n_alunos = n()) 
+
+ggplot(data=n_alunos_curso_CC, aes(x=Periodo, y=n_alunos)) + 
+  geom_bar(stat="identity") +
+  labs(title="Quantidade de Alunos no Curso de Computação \n UFCG (2002 - 2014)", x="Alunos em CC", y="Total de Alunos")
+
+```
