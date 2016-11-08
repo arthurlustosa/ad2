@@ -1,0 +1,25 @@
+---
+title: "prob1-cp2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+dados <- read.csv("dados/alunosUFCGAnon.csv")
+```
+
+
+##Problema 1 - Checkpoint 2
+###Análise Descritiva
+
+Nossa análise será voltada para o exploração e visualização de dados. Os dados utilizados nessa análise são referentes as disciplinas dos cursos da UFCG, por motivos de segurança os nomes dos alunos foram removidos e não tivemos acesso a essa informação, os dados contemplam o período de 2002 a 2014. 
+Os dados representam uma visão do banco de dados do controle acadêmico da UFCG. Os campos são praticamente auto-explicativos, com excessão talvez dos seguintes campos que são explicados abaixo:
+
+Cod_Evasao = 0 se o aluno nao evadiu ao fim do primeiro periodo e 1 se ele evadiu.
+
+Credito_Curso = total de créditos necessários para o aluno concluir o curso.
+
+Periodo_Ingresso = periodo que o aluno entrou no curso.
+```{r cars}
+summary(cars)
+```
+
