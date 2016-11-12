@@ -6,6 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 library(dplyr)
 library(ggplot2)
+require(GGally)
 dados <- read.csv("../../dados/alunosUFCGAnon.csv", stringsAsFactors = F)
 ```
 
@@ -35,7 +36,7 @@ Periodo_Ingresso = periodo que o aluno entrou no curso.
 n_alunos_curso <- dados %>%
   select(Matricula, Cod_Curso, Nome_Curso, Departamento, Periodo, Campus) %>%
   distinct(Matricula, Cod_Curso, Nome_Curso, Campus) %>%
-  group_by(Nome_Curso, Cod_Curso, Campus, Periodo) %>%
+  group_by(Nome_Curso, Cod_Curso, Campus) %>%
   summarise(n_alunos = n()) 
 
 ggplot(data=n_alunos_curso, aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos)) + 
@@ -46,7 +47,7 @@ ggplot(data=n_alunos_curso, aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos)) +
 ```
 No gráfico acima temos uma visão geral da quantidade de alunos que já passaram pelos cursos da UFCG entre 2002 e 2014. Temos um total de 95 cursos espalhados por 9 campus. 
 
-Fazendo um corte nos nossos dados, escolhemos o curso de Ciência da Computação para termos um panorama geral sobre seu histórico. Conseguimos ver que com o passar dos anos o número de alunos no curso de 
+Fazendo um corte nos nossos dados, escolhemos o curso de Ciência da Computação para termos um panorama geral sobre seu histórico. Conseguimos ver que com o passar dos anos o número de alunos cresce consecutivamente a cada período, porém no ano de 2011 temos uma queda nesse número, posteriormente vemos que começa a crescer. 
 ```{r cars}
 #Numero de alunos no curso de computação 2002 - 2014
 n_alunos_curso_CC <- dados %>%
@@ -56,8 +57,74 @@ n_alunos_curso_CC <- dados %>%
   group_by(Nome_Curso, Cod_Curso, Campus, Periodo) %>%
   summarise(n_alunos = n()) 
 
+
 ggplot(data=n_alunos_curso_CC, aes(x=Periodo, y=n_alunos)) + 
-  geom_bar(stat="identity") +
+  geom_line(stat="identity") +
+  geom_point(stat = "identity") +
+  scale_x_continuous(breaks=n_alunos_curso_CC$Periodo)+
+  scale_y_continuous(breaks=n_alunos_curso_CC$n_alunos) +
+   theme(plot.margin = unit(c(0.5, 0.5,0.5, 0.5), "cm"), 
+              axis.text.x = element_text(angle = 55, hjust = 1),
+              legend.position = "right") 
   labs(title="Quantidade de Alunos no Curso de Computação \n UFCG (2002 - 2014)", x="Alunos em CC", y="Total de Alunos")
 
 ```
+
+Agora vamos pra análise propriamente dita. Temos 3 perguntas para serem respondidas a partir dos nossos dados, vamos à primeira:
+
+####1ª Pergunta
+
+Em quais cursos estão as melhores e piores notas? Por que você acha que isso acontece em cada caso?
+
+```{r cars}
+#Notas por curso
+notas_por_curso <- aggregate(dados$Media_Disciplina, list(dados$Nome_Curso), FUN = median, na.rm=TRUE)
+
+ggplot(data=notas_por_curso, aes(x=reorder(Group.1, x), y=x)) + 
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(title="Notas por curso", x="Cursos", y="Notas")
+
+```
+No gráfico de barras mostrado acima conseguimos observar os cursos de acordo com suas notas, nesse caso os cursos estão ordenados a partir da mediana das médias das suas disciplinas. Utilizamos a médiana devido ela ser uma métrica estatística que não é influenciada por outliers e também serve para quando temos dados com quantidades desiguais, como nesse caso que os cursos são possuem a mesma quantidade de alunos, então a escolha da mediana nos ajuda a representar melhor as notas de cada curso. 
+O curso que possue as melhores notas é o de Direito - M com uma mediana de 8,6 e o pior é o de Estatística - D com 4,2.
+
+####2ª Pergunta
+Em qual período estão as melhores e piores notas do curso de Ciência da Computação?
+```{r cars}
+#Notas Ciência da Computação
+
+dados_cc <- dados %>%
+  filter(Cod_Curso == 14102100)
+
+notas_por_curso_cc <- aggregate(dados_cc$Media_Disciplina, list(dados_cc$Nome_Curso, dados_cc$Periodo), FUN = median, na.rm=TRUE)
+
+ggplot(data=notas_por_curso_cc, aes(x=reorder(Group.2, x), y=x)) + 
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(title="Notas do curso de Ciência da Computação", x="Períodos", y="Notas")
+
+```
+Agora reduzimos nosso escopo para olharmos apenas as notas do curso de Ciência da Computação, para isso agrupamos os períodos e utilizamos a mesma estratégia usada anteriormente, quando visualizamos as notas por curso, a mediana, visto que os períodos tem quantidades diferentes de alunos.  Logo, o período com as melhores notas é 2002.1, porém como já foi falado, não devemos deixar de levar em conta a quantidade de alunos por cada período, nesse caso em 2002.1 a quantidade de alunos é a menor de todos os períodos. 
+
+####3ª Pergunta
+Existe correlação entre as notas de Matemática Discreta e Cáclulo I para o curso de Ciência da Computação? Se sim, a correlação é positiva ou negativa? Qual a força dessa correlação? (Dica: cada par ordenada de notas (x,y) onde x é a nota de Cálculo I e y de Matemática Discreta corresponde a um aluno que cursou as duas disciplinas).
+
+```{r}
+#Correlação entre notas de cálculo 1 e matemática discreta
+
+
+notas_por_curso_cc2 <- aggregate(dados_cc$Media_Disciplina, list(dados_cc$Nome_Curso, dados_cc$Nome_Disciplina), FUN = median, na.rm=TRUE)
+
+notas_C1_MD <- dados_cc %>%
+  filter(Nome_Disciplina == "MATEMÁTICA DISCRETA"  | Nome_Disciplina == "CALCULO DIFERENCIAL E INTEGRAL I") %>%
+  select(Nome_Disciplina, Media_Disciplina)
+  
+notas_cc_c1_md <- aggregate(notas_C1_MD$Media_Disciplina, list(notas_C1_MD$Nome_Curso, notas_C1_MD$Nome_Disciplina), FUN = median, na.rm=TRUE)
+    
+
+ggpairs(notas_C1_MD)
+
+corr_notas_cc <- cor(notas_cc_c1_md$x)
+corrplot(correlacao.emendas, type="upper", order="hclust", tl.col="black", tl.srt=45)
+}
