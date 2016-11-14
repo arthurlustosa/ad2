@@ -7,7 +7,6 @@ output: html_document
 library(dplyr)
 library(ggplot2)
 require(GGally)
-library(corrplot)
 dados <- read.csv("../../dados/alunosUFCGAnon.csv", stringsAsFactors = F)
 ```
 
@@ -49,7 +48,7 @@ ggplot(data=n_alunos_curso, aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos)) +
 No gráfico acima temos uma visão geral da quantidade de alunos que já passaram pelos cursos da UFCG entre 2002 e 2014. Temos um total de 95 cursos espalhados por 9 campus. 
 
 Fazendo um corte nos nossos dados, escolhemos o curso de Ciência da Computação para termos um panorama geral sobre seu histórico. Conseguimos ver que com o passar dos anos o número de alunos cresce consecutivamente a cada período, porém no ano de 2011 temos uma queda nesse número, posteriormente vemos que começa a crescer. 
-```{r}
+```{r, autosize=F}
 #Numero de alunos no curso de computação 2002 - 2014
 n_alunos_curso_CC <- dados %>%
   filter(Cod_Curso == 14102100) %>%
@@ -59,14 +58,12 @@ n_alunos_curso_CC <- dados %>%
   summarise(n_alunos = n()) 
 
 
-ggplot(data=n_alunos_curso_CC, aes(x=Periodo, y=n_alunos)) + 
+ggplot(data=n_alunos_curso_CC, aes(x=factor(Periodo), y=n_alunos, group=1)) + 
   geom_line(stat="identity") +
-  geom_point(stat = "identity") +
-  scale_x_continuous(breaks=n_alunos_curso_CC$Periodo)+
-  scale_y_continuous(breaks=n_alunos_curso_CC$n_alunos) +
+  geom_point(stat="identity") +
    theme(plot.margin = unit(c(0.5, 0.5,0.5, 0.5), "cm"), 
               axis.text.x = element_text(angle = 55, hjust = 1),
-              legend.position = "right") 
+              legend.position = "right") +
   labs(title="Quantidade de Alunos no Curso de Computação \n UFCG (2002 - 2014)", x="Alunos em CC", y="Total de Alunos")
 
 ```
