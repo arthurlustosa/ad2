@@ -1,0 +1,29 @@
+---
+title: "prob1-cp3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+require(GGally)
+dados <- read.csv("../../dados/alunosUFCGAnon.csv", stringsAsFactors = F)
+```
+
+## Problema 1 - Checkpoint 3
+
+Nosso objetivo agora é nos aprofundarmos mais nos dados, para isso vamos dar mais uma olhada e ver se encontramos algumas informações.
+
+Perguntas: 
+
+Dentro de um panorama geral, quais os cursos da UFCG que o índice de reprovação é mais alto?
+
+Análisando as notas do curso de Ciência da Computação por período, será possível dizer se as notas dos períodos .1 são melhores que as dos .2 ou vice e versa?
+
+Ainda no curso de computação, as cadeiras ofertadas por outros departamentos possuem índice de reprovação mais alto que as do próprio departamento?
+
+```{r cars}
+
+```
+
+
