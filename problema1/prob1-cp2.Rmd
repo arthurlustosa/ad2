@@ -39,13 +39,20 @@ n_alunos_curso <- dados %>%
   group_by(Nome_Curso, Cod_Curso, Campus) %>%
   summarise(n_alunos = n()) 
 
-ggplot(data=n_alunos_curso, aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos)) + 
+n_alunos_curso <- n_alunos_curso[order(-n_alunos_curso$n_alunos),]
+
+ggplot(data=n_alunos_curso[1:10,], aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos, group=1)) + 
   geom_bar(stat="identity") +
   coord_flip() +
-  labs(title="Quantidade de Alunos por Curso \n UFCG (2002 - 2014)", x="Curso", y="Total de Alunos")
+  labs(title="10 cursos com mais alunos", x="Curso", y="Total de Alunos")
+
+ggplot(data=n_alunos_curso[86:95,], aes(x=reorder(Nome_Curso, n_alunos), y=n_alunos, group=1)) + 
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(title="10 cursos com menos alunos", x="Curso", y="Total de Alunos")
 
 ```
-No gráfico acima temos uma visão geral da quantidade de alunos que já passaram pelos cursos da UFCG entre 2002 e 2014. Temos um total de 95 cursos espalhados por 9 campus. 
+Nos gráficos acima temos uma visão geral da quantidade de alunos que já passaram pelo cursos da UFCG entre 2002 e 2014. Temos um total de 95 cursos espalhados por 9 campus. Escolhemos reduzir o escopo e exbir apenas os 10 cursos com mais alunos e os 10 com menos, devido a quatidade de cursos ser alta e atrapalhar a visualização. 
 
 Fazendo um corte nos nossos dados, escolhemos o curso de Ciência da Computação para termos um panorama geral sobre seu histórico. Conseguimos ver que com o passar dos anos o número de alunos cresce consecutivamente a cada período, porém no ano de 2011 temos uma queda nesse número, posteriormente vemos que começa a crescer. 
 ```{r, autosize=F}
@@ -78,13 +85,19 @@ Em quais cursos estão as melhores e piores notas? Por que você acha que isso a
 #Notas por curso
 notas_por_curso <- aggregate(dados$Media_Disciplina, list(dados$Nome_Curso), FUN = median, na.rm=TRUE)
 
-ggplot(data=notas_por_curso, aes(x=reorder(Group.1, x), y=x)) + 
+notas_por_curso <- notas_por_curso[order(-notas_por_curso$x),]
+
+ggplot(data=notas_por_curso[1:10,], aes(x=reorder(Group.1, x), y=x)) + 
   geom_bar(stat="identity") +
   coord_flip() +
-  labs(title="Notas por curso", x="Cursos", y="Notas")
+  labs(title="Notas por curso (top 10 superiores em notas)", x="Cursos", y="Notas")
 
+ggplot(data=notas_por_curso[66:76,], aes(x=reorder(Group.1, x), y=x)) + 
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(title="Notas por curso (top 10 inferiores em notas)", x="Cursos", y="Notas")
 ```
-No gráfico de barras mostrado acima conseguimos observar os cursos de acordo com suas notas, nesse caso os cursos estão ordenados a partir da mediana das médias das suas disciplinas. Utilizamos a médiana devido ela ser uma métrica estatística que não é influenciada por outliers e também serve para quando temos dados com quantidades desiguais, como nesse caso que os cursos são possuem a mesma quantidade de alunos, então a escolha da mediana nos ajuda a representar melhor as notas de cada curso. 
+Nos gráficos de barras mostrado acima conseguimos observar os cursos de acordo com suas notas. Para ajudar na nossa visualização, fizemos um recorte nos dados devido a quantidade de cursos ser muito alta, separamos em dois gráficos um contendo os top 10 melhores e 10 piores baseado em suas notas. Nesse caso os cursos estão ordenados a partir da mediana das médias das suas disciplinas. Utilizamos a médiana devido ela ser uma métrica estatística que não é influenciada por outliers e também serve para quando temos dados com quantidades desiguais, como nesse caso que os cursos são possuem a mesma quantidade de alunos, então a escolha da mediana nos ajuda a representar melhor as notas de cada curso. 
 O curso que possue as melhores notas é o de Direito - M com uma mediana de 8,6 e o pior é o de Estatística - D com 4,2.
 
 ####2ª Pergunta
