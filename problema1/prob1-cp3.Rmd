@@ -37,7 +37,6 @@ colnames(notas_por_periodo_ccc) = c("Periodo", "Media_Notas")
 
 notas_por_periodo_ccc <- notas_por_periodo_ccc %>%
   mutate(tipo_periodo = substr(as.character(notas_por_periodo_ccc$Periodo),6,6))
-substr(x, start, stop)
 
 #removendo anos que não influenciam na resposta
 notas_por_periodo_ccc <- notas_por_periodo_ccc[3:26,]
@@ -54,18 +53,18 @@ ggplotly()
 ```{r}
 #Pergunta 2
 #apenas dados de ciência da computação
-dados_ccc <- dados %>%
-  filter(Cod_Curso == 14102100) 
+
   
-notas_por_periodo_ccc <- aggregate(dados_ccc2$Media_Disciplina, list(dados_ccc2$Periodo_Ingresso), FUN = median, na.rm=TRUE)
+notas_ccc_por_departamento <- aggregate(dados_ccc2$Media_Disciplina, list(dados_ccc2$Departamento), FUN = median, na.rm=TRUE)
 
 #renomeando colunas
-colnames(notas_por_periodo_ccc) = c("Periodo", "Media_Notas")
+colnames(notas_ccc_por_departamento) = c("Departamento", "Media_Notas")
 
 
-notas_por_periodo_ccc <- notas_por_periodo_ccc %>%
-  mutate(tipo_periodo = substr(as.character(notas_por_periodo_ccc$Periodo),6,6))
-substr(x, start, stop)
+ggplot(data=notas_ccc_por_departamento, aes(x=reorder(Departamento,Media_Notas), y=Media_Notas, fill=Departamento)) +
+    geom_bar(stat="identity")
+
+ggplotly()
 
 
 
