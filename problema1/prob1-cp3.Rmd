@@ -7,6 +7,7 @@ output: html_document
 library(dplyr)
 library(ggplot2)
 require(GGally)
+library(plotly)
 dados <- read.csv("../../dados/alunosUFCGAnon.csv", stringsAsFactors = F)
 ```
 
@@ -18,12 +19,55 @@ Perguntas:
 
 Dentro de um panorama geral, quais os cursos da UFCG que o índice de reprovação é mais alto?
 
-Análisando as notas do curso de Ciência da Computação por período, será possível dizer se as notas dos períodos .1 são melhores que as dos .2 ou vice e versa?
+Análisando as notas do curso de Ciência da Computação por período, será possível dizer se as notas dos períodos .1 são melhores que as dos .2 ou vice-e-versa?
 
 Ainda no curso de computação, as cadeiras ofertadas por outros departamentos possuem índice de reprovação mais alto que as do próprio departamento?
 
-```{r cars}
+```{r}
+#Pergunta 1
+#apenas dados de ciência da computação
+dados_ccc <- dados %>%
+  filter(Cod_Curso == 14102100) 
+  
+notas_por_periodo_ccc <- aggregate(dados_ccc2$Media_Disciplina, list(dados_ccc2$Periodo_Ingresso), FUN = median, na.rm=TRUE)
+
+#renomeando colunas
+colnames(notas_por_periodo_ccc) = c("Periodo", "Media_Notas")
+
+
+notas_por_periodo_ccc <- notas_por_periodo_ccc %>%
+  mutate(tipo_periodo = substr(as.character(notas_por_periodo_ccc$Periodo),6,6))
+substr(x, start, stop)
+
+#removendo anos que não influenciam na resposta
+notas_por_periodo_ccc <- notas_por_periodo_ccc[3:26,]
+
+ggplot(data=notas_por_periodo_ccc, aes(x=Periodo, y=Media_Notas, fill=tipo_periodo, group=1)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  labs(title="Medias por período CC", x="Curso", y="Média Notas")
+
+ggplotly()
 
 ```
 
+
+```{r}
+#Pergunta 2
+#apenas dados de ciência da computação
+dados_ccc <- dados %>%
+  filter(Cod_Curso == 14102100) 
+  
+notas_por_periodo_ccc <- aggregate(dados_ccc2$Media_Disciplina, list(dados_ccc2$Periodo_Ingresso), FUN = median, na.rm=TRUE)
+
+#renomeando colunas
+colnames(notas_por_periodo_ccc) = c("Periodo", "Media_Notas")
+
+
+notas_por_periodo_ccc <- notas_por_periodo_ccc %>%
+  mutate(tipo_periodo = substr(as.character(notas_por_periodo_ccc$Periodo),6,6))
+substr(x, start, stop)
+
+
+
+```
 
