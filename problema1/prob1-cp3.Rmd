@@ -23,7 +23,7 @@ str(dados)
 
 
 
-```{r}
+```{r autosize=F}
 n_alunos_curso <- dados %>%
   select(Matricula, Cod_Curso, Nome_Curso, Departamento, Periodo, Campus) %>%
   distinct(Matricula, Cod_Curso, Nome_Curso, Campus) %>%
@@ -31,8 +31,19 @@ n_alunos_curso <- dados %>%
   summarise(n_alunos = n()) 
 
 
+s <- ggplot(n_alunos_curso, aes(x=Nome_Curso, y=n_alunos, colour=Nome_Curso), size=100) + 
+  geom_point() +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.position="none") +
+    labs(title="Cursos UFCG", x="Cursos UFCG", y="Número de Alunos")
+
+ggplotly(s)
+
 ```
 
+No gráfico acima temos uma distribuição de todos os cursos da UFCG com o número de alunos. 
 O objetivo dessa parte do laboratório é formular três perguntas que possam ser respondidas utilizando o conjunto de dados fornecido e responder a duas dessas perguntas. 
 
 ## Perguntas: 
@@ -47,7 +58,7 @@ O objetivo dessa parte do laboratório é formular três perguntas que possam se
 ## Respostas
 
 #### 1 - Análisando as notas do curso de Ciência da Computação por período, será possível dizer se as notas dos períodos .1 são melhores que as dos .2 ou vice-e-versa?
-```{r}
+```{r autosize=F}
 #Pergunta 1
 #apenas dados de ciência da computação
 dados_ccc <- dados %>%
@@ -75,7 +86,7 @@ ggplotly(p)
 Para responder essa pergunta, vamos agrupar nossos dados pelo periodo de ingresso dos alunos e calcular a mediana das suas notas nas disciplinas. Nossos resultados precisaram ser reformulados, visto que ao calcularmos as medianas foram encontrados nos dados os períodos de 1999.1 e 1999.2 que não possuiam dados revelantes e por isso essas linhas foram removidas, tivemos dados de 2014.1, mas como o objetivo da pergunta é fazer uma comparação entre os períodos do ano letivo removemos a linha referente a 2014.1. Utilizamos a mediana devido a quantidade de alunos por período variar e sendo assim, conseguimos manter um padrão nos valores obtidos, não deixando valores extremos influenciar nossos resultados. Observando o gráfico acima é possível afirmar que as notas dos primeiros períodos de um ano letivo, ou seja, dos .1s (ponto um)  são melhores que as dos .2s (ponto dois).
 
 #### 2 - Ainda no curso de computação, as cadeiras ofertadas por outros departamentos possuem índice de reprovação mais alto que as do próprio departamento?
-```{r}
+```{r autosize=F}
 #Pergunta 2
 #apenas dados de ciência da computação
 
@@ -86,6 +97,9 @@ colnames(notas_ccc_por_departamento) = c("Departamento", "Media_Notas")
 
 d <- ggplot(data=notas_ccc_por_departamento, aes(x=reorder(Departamento,Media_Notas), y=Media_Notas, fill=Departamento)) +
     geom_bar(stat="identity") +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   labs(title="Media de Notas por Departamentos", x="Departamentos", y="Media de Notas")
 
 ggplotly(d)
