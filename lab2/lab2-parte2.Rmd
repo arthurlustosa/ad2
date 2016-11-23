@@ -1,0 +1,38 @@
+---
+title: "Lab2 - Parte 2"
+output: 
+  html_document:
+    toc : true
+    toc_float: true
+    
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+```
+
+## Lendo os dados
+
+```{r}
+dados <- read.csv("dados/graduados.csv")
+
+graduados <- dados %>%
+  arrange(matricula)
+
+graduados.clean <- graduados %>%
+  filter(!is.na(media)) %>%
+  group_by(matricula, disciplina) %>%
+  filter(media == max(media))
+
+graduados.cra <- graduados.clean %>%
+  group_by(matricuka) %>%
+  mutate(cra.contrb = media*creditos) %>%
+  summarise(cra = sum(cra.contrb)/sum(creditos))
+```
+
+
+
+```{r}
+
+```
+
