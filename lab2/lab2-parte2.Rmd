@@ -10,6 +10,8 @@ output:
 ```{r setup, include=FALSE}
 library(dplyr)
 library(reshape2)
+library(GGally)
+library(ggplot2)
 ```
 
 ## Lendo os dados
@@ -43,3 +45,18 @@ graduados.model.input <- graduados.clean %>%
 
 ```
 
+```{r}
+primeiro.periodo <- graduados.model.input %>%
+  select(matricula, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Programação.I, Introdução.à.Computação, Laboratório.de.Programação.I, cra)
+
+segundo.periodo <-  graduados.model.input %>%
+  select(matricula, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
+
+primeiro.periodo <- na.omit(primeiro.periodo)
+segundo.periodo <- na.omit(segundo.periodo)
+
+
+  
+ggpairs(primeiro.periodo %>% select(-matricula))
+
+```
