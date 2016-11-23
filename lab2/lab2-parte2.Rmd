@@ -9,30 +9,37 @@ output:
 
 ```{r setup, include=FALSE}
 library(dplyr)
+library(reshape2)
 ```
 
 ## Lendo os dados
 
 ```{r}
 dados <- read.csv("dados/graduados.csv")
+```
 
+
+## Conhecendo os dados
+```{r}
 graduados <- dados %>%
   arrange(matricula)
 
 graduados.clean <- graduados %>%
-  filter(!is.na(media)) %>%
-  group_by(matricula, disciplina) %>%
-  filter(media == max(media))
+  filter(!is.na(media))
 
 graduados.cra <- graduados.clean %>%
-  group_by(matricuka) %>%
+  group_by(matricula) %>%
   mutate(cra.contrb = media*creditos) %>%
   summarise(cra = sum(cra.contrb)/sum(creditos))
-```
 
-
-
-```{r}
+graduados.model.input <- graduados.clean %>%
+  group_by(matricula, disciplina) %>%
+  filter(media == max(media))%>%
+  ungroup() %>%
+  select(matricula, disciplina, media) %>%
+  mutate(disciplina = as.factor(gsub(" ", ".", disciplina))) %>%
+  dcast(matricula ~disciplina, mean) %>%
+  merge(graduados.cra)
 
 ```
 
