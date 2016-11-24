@@ -1,5 +1,5 @@
 ---
-title: "Lab2 - Parte 2"
+title: "Lab2 - Regressão Linear"
 output: 
   html_document:
     toc : true
@@ -12,7 +12,10 @@ library(dplyr)
 library(reshape2)
 library(GGally)
 library(ggplot2)
+library(corrplot)
 ```
+
+## Utilizando regressão linear para explicar o desempenho acadêmico.
 
 ## Lendo os dados
 
@@ -45,18 +48,76 @@ graduados.model.input <- graduados.clean %>%
 
 ```
 
+
+
+## Analisando Primeiro Periodo
 ```{r}
 primeiro.periodo <- graduados.model.input %>%
   select(matricula, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Programação.I, Introdução.à.Computação, Laboratório.de.Programação.I, cra)
 
+primeiro.periodo <- na.omit(primeiro.periodo)
+primeiro.periodo <- primeiro.periodo %>% select(-matricula)
+
+ggpairs(primeiro.periodo)
+
+df1 <- melt(primeiro.periodo)
+
+ggplot(df1,aes(x = value)) + 
+    facet_wrap(~variable, scales = "free_x") + 
+    geom_histogram()
+```
+
+### Analisando Matriz de correlação
+```{r}
+correlationMatrix1 <- cor(primeiro.periodo)
+print(correlationMatrix1)
+corrplot(correlationMatrix1, method="circle", type="lower", order="hclust", addCoef.col = "black")
+```
+
+## Modelo
+```{r}
+
+modelo.primeiro.periodo <- lm(cra ~ Laboratório.de.Programação.I + Programação.I + Introdução.à.Computação + Cálculo.Diferencial.e.Integral.I + Álgebra.Vetorial.e.Geometria.Analítica + Leitura.e.Produção.de.Textos, primeiro.periodo)
+modelo.primeiro.periodo
+
+
+library(broom)
+tidy(modelo.primeiro.periodo, conf.int = TRUE)
+```
+
+
+## Analisando Segundo Periodo
+```{r}
 segundo.periodo <-  graduados.model.input %>%
   select(matricula, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
 
-primeiro.periodo <- na.omit(primeiro.periodo)
 segundo.periodo <- na.omit(segundo.periodo)
+segundo.periodo <- segundo.periodo %>% select(-matricula)
+
+ggpairs(segundo.periodo)
+
+df2 <- melt(segundo.periodo)
+
+ggplot(df2,aes(x = value)) + 
+    facet_wrap(~variable, scales = "free_x") + 
+    geom_histogram()
+
+```
+
+### Analisando Matriz de correlação
+```{r}
+correlationMatrix2 <- cor(segundo.periodo)
+print(correlationMatrix2)
+corrplot(correlationMatrix2, method="circle", type="lower", order="hclust", addCoef.col = "black")
+```
+
+## Modelo
+```{r}
+
+modelo.segundo.periodo <- lm(cra ~ Cálculo.Diferencial.e.Integral.II + Matemática.Discreta + Programação.II + Teoria.dos.Grafos+ Fundamentos.de.Física.Clássica+ Laboratório.de.Programação.II, segundo.periodo)
+modelo.primeiro.periodo
 
 
-  
-ggpairs(primeiro.periodo %>% select(-matricula))
-
+library(broom)
+tidy(modelo.primeiro.periodo, conf.int = TRUE)
 ```
