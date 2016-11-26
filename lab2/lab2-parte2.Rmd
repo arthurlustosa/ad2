@@ -74,16 +74,76 @@ print(correlationMatrix1)
 corrplot(correlationMatrix1, method="circle", type="lower", order="hclust", addCoef.col = "black")
 ```
 
+### Regressão Linear com a váriável mais correlacionada
+Observando a matriz de correlação, percebemos que a variável que possue correlação mais alta com o CRA é a disciplina de Introdução a computação, para entendermos mais essa correlação vamos gerar um modelo de regressão linear apenas para essa variável e observar os resultados. 
+
+```{r}
+#modelo de regressao linear
+lm.IC = lm(primeiro.periodo$cra ~ primeiro.periodo$Introdução.à.Computação)
+```
+Vamos analisar nosso modelo
+```{r}
+summary(lm.IC)
+```
+Vamos calcular as predições e os resíduos do nosso modelo
+```{r}
+predicoes = predict.lm(lm.IC,primeiro.periodo)
+residuos = primeiro.periodo$cra - predicoes
+```
+#### Gráficos de diagnósticos
+```{r}
+axisRange = extendrange(c(primeiro.periodo$cra,predicoes)) #deixando as variáveis na mesma escala
+plot(primeiro.periodo$cra,predicoes)
+abline(0,1,col="blue",lty=2,lwd=2)
+
+```
+
+#### Gráficos de diagnósticos referentes aos resíduos.
+Plotando previsões versus resíduos
+```{r}
+plot(predicoes,residuos)
+abline(h=0,col="blue",lty=2,lwd=2)
+
+```
+Verificando se os resíduos seguem uma distribuição normal com média 0:
+```{r}
+qqnorm(residuos)
+qqline(residuos, col = 2,lwd=2,lty=2)
+```
+Verificando frequência dos resíduos
+```{r}
+ggplot(lm.IC, aes(.resid)) + labs(title="Frequência de resíduos", x= "Resíduo", y="Frequência") + 
+  geom_freqpoly(binwidth = 0.5) 
+```
+Analisando os três gráficos mostrados acima, conseguimos ver que os resíduos possuem uma distribuição simétrica em relação a linha tracejada, não temos nenhum padrão que possa ser considerado o que significa que nosso modelo está bem elaborado.  No segundo gráfico, temos que os resíduos seguem uma distribuição normal com média zero, a sobreposição dos pontos sobre a linha vermelha nos mostra isso. No terceiro gŕafico observamos a a frequência dos nossos resíduos e vemos que ela tem um coportamento bem similiar a de uma normal.
+
+Após analisar a relação entre a disciplina de Introdução a Computação e seu reflexo no CRA do aluno, vamos construir um modelo que leva em consideração todas as disciplinas do primeiro período 
+
 ## Modelo
 ```{r}
 
-modelo.primeiro.periodo <- lm(cra ~ Laboratório.de.Programação.I + Programação.I + Introdução.à.Computação + Cálculo.Diferencial.e.Integral.I + Álgebra.Vetorial.e.Geometria.Analítica + Leitura.e.Produção.de.Textos, primeiro.periodo)
-modelo.primeiro.periodo
+lm.primeiro.periodo <- lm(cra ~ Laboratório.de.Programação.I + Programação.I + Introdução.à.Computação + Cálculo.Diferencial.e.Integral.I + Álgebra.Vetorial.e.Geometria.Analítica + Leitura.e.Produção.de.Textos, primeiro.periodo)
+lm.primeiro.periodo
 
 
 library(broom)
-tidy(modelo.primeiro.periodo, conf.int = TRUE)
+tidy(lm.primeiro.periodo, conf.int = TRUE)
+
+
+#plot do modelo
+prediction <- predict(lm.primeiro.periodo)
+
+exp.prediction <- exp(prediction) - 1 #transformando o vetor de predição para a unidade original do problema (em ha).
+
+lm_prediction <- data.frame(pred = exp.prediction, obs = primeiro.periodo$cra)
+
+ggplot(lm_prediction, aes(x = pred, y = obs)) + geom_point(alpha = 0.5, position = position_jitter(width=0.2)) + geom_abline(colour = "red") + ggtitle("Previsão x Observado (validação)")
+
+ggplot(lm_prediction, aes(pred, obs)) +  geom_point(alpha = 0.1, position = position_jitter(width = 0.3)) + 
+  labs(title="Previsão do modelo", x= "Predição", y="CRA") +  
+  geom_line(aes(y = predict(lm.primeiro.periodo, primeiro.periodo)), colour = "red")
 ```
+
 
 
 ## Analisando Segundo Periodo
@@ -113,11 +173,6 @@ corrplot(correlationMatrix2, method="circle", type="lower", order="hclust", addC
 
 ## Modelo
 ```{r}
-
 modelo.segundo.periodo <- lm(cra ~ Cálculo.Diferencial.e.Integral.II + Matemática.Discreta + Programação.II + Teoria.dos.Grafos+ Fundamentos.de.Física.Clássica+ Laboratório.de.Programação.II, segundo.periodo)
-modelo.primeiro.periodo
 
-
-library(broom)
-tidy(modelo.primeiro.periodo, conf.int = TRUE)
 ```
