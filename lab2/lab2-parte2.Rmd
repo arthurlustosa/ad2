@@ -54,9 +54,49 @@ graduados.model.input <- graduados.clean %>%
 
 A ideia principal dessa análise é explicar o desempenho acadêmico final dos alunos de computação, analisando como foi o seu desempenho no início do curso. Para isso vamos analisar seus rendimentos no primeiro e no segundo período do curso, levando em consideração suas notas nas disciplinas cursadas e, usando regressão linear, tentar explicar seu desempenho final. Nossa análise será dividida por partes, primeiro vamos nos aprofundar no primeiro período, ver quais disciplinas mais afetam o desempenho do aluno, depois vamos ver quais disciplinas não influenciam, nesse caso vamos identificar as cadeiras que não tem valor em significância para o modelo que queremos construi e assim removê-las. Depois de selecionar as variáveis mais importantes vamos montar nosso modelo.
 
+##1 
+
+```{r fig.width=12, fig.height=10}
+
+#selecionando disciplinas do primeiro e segundo período e cra
+p1.p2 <- graduados.model.input %>%
+  select(Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
+
+p1.p2 <- na.omit(p1.p2)
+
+lm.p1p2 <-lm(cra ~ ., p1.p2)
+
+summary(lm.p1p2)
+```
+Temos agora nosso primeiro modelo com todas as variáveis (disciplinas) do primeiro e do segundo período. Esse modelo consegue explicar ~68% da variável alvo CRA. Para melhorar nosso modelo vamos analisar a correlação entre as variáveis.
+
+```{r fig.width=12, fig.height=10}
+#calculando matriz de correlação
+correlationMatrix <- cor(p1.p2)
+
+#utlizamos a bibliota corrplot para montar o gráfico com as correlações
+corrplot(correlationMatrix, method="circle", type="lower", order="hclust", addCoef.col = "black")
+```
+
+Analisando a matriz de correlação das variáveis observamos que a maioria das variaveis possue uma correlaçao ate 0.5 ou inferior, baseado nisso assumimos um treshhold de 0.65, ou seja, acima desse valor a correlaçao entre as variaveis e considerada alta. 
+Para melhorar nosso modelo escolhemos uma estrategia de remover as variaveis que possuem uma correlacao alta e um p-valor alto.
+
+```{r}
+lm.p1p2.melhorado <-lm(cra ~ . -Laboratório.de.Programação.I, p1.p2, -Teoria.dos.Grafos, Programação.II)
+
+summary(lm.p1p2.melhorado)
+
+#reduzindo gráficos residos 
+#par(mfrow=c(2,1))
+#plot(lm.p1p2.melhor, which=1:2)
+
+```
+
+As variaveis retiradas foram LPI, Grafos e Programaçao 2. Observando nosso modelo melhorado, observamos que o R2 ajustado reduziu.
+
 ##1 - Primeiro Periodo
 Vamos filtrar nosso dataset original para utilizarmos apenas as disciplinas referentes ao primeiro período.
-```{r}
+```{r fig.width=12, fig.height=10}
 #filtrando disciplinas
 primeiro.periodo <- graduados.model.input %>%
   select(matricula, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Programação.I, Introdução.à.Computação, Laboratório.de.Programação.I, cra)
@@ -74,7 +114,7 @@ df1 <- melt(primeiro.periodo)
 #plotando histogramas
 ggplot(df1,aes(x = value)) + 
     facet_wrap(~variable, scales = "free_x") + 
-    geom_histogram()
+    geom_histogram(aes(fill=..count..))
 ```
 
 ###1.1 - Relacionamento entre variáveis.
@@ -82,11 +122,9 @@ Nos gráficos acima podemos ver o relacionamento entre as variáveis. Podemos ve
 
 
 ###1.2 - Analisando Matriz de correlação
-```{r}
+```{r fig.width=12, fig.height=10}
 #calculando matriz de correlação
 correlationMatrix1 <- cor(primeiro.periodo)
-
-print(correlationMatrix1)
 
 #utlizamos a bibliota corrplot para montar o gráfico com as correlações
 corrplot(correlationMatrix1, method="circle", type="lower", order="hclust", addCoef.col = "black")
@@ -115,7 +153,7 @@ predicoes = predict.lm(lm.IC,primeiro.periodo)
 residuos = CRA.p.1 - predicoes
 ```
 ####1.2.2 - Gráficos de diagnósticos
-```{r}
+```{r fig.width=12, fig.height=10}
 axisRange = extendrange(c(CRA.p.1,predicoes)) #deixando as variáveis na mesma escala
 
 #plot modelo
@@ -126,19 +164,19 @@ abline(0,1,col="red",lty=2,lwd=2)
 
 ####1.2.3 - Gráficos de diagnósticos referentes aos resíduos.
 Plotando previsões versus resíduos
-```{r}
+```{r fig.width=12, fig.height=10}
 #plot residuos
 plot(predicoes,residuos)
 abline(h=0,col="blue",lty=2,lwd=2)
 
 ```
 Verificando se os resíduos seguem uma distribuição normal com média 0:
-```{r}
+```{r fig.width=12, fig.height=10}
 qqnorm(residuos)
 qqline(residuos, col = 2,lwd=2,lty=2)
 ```
 Verificando frequência dos resíduos
-```{r}
+```{r fig.width=12, fig.height=10}
 ggplot(lm.IC, aes(.resid)) + labs(title="Frequência de resíduos", x= "Resíduo", y="Frequência") + 
   geom_freqpoly(binwidth = 0.5) 
 ```
@@ -151,23 +189,19 @@ Agora vamos para o nosso modelo principal da análise do primeiro período. Nele
 ```{r}
 #modelo utilizando todas as variaveis
 lm.primeiro.periodo <- lm(cra ~ Laboratório.de.Programação.I + Programação.I + Introdução.à.Computação + Cálculo.Diferencial.e.Integral.I + Álgebra.Vetorial.e.Geometria.Analítica + Leitura.e.Produção.de.Textos, primeiro.periodo)
-lm.primeiro.periodo
 
-
-library(broom)
-tidy(lm.primeiro.periodo, conf.int = TRUE)
+summary(lm.primeiro.periodo)
 
 ```
+Analisando nosso modelo, vemos que as variáveis 
 
 ####1.3.1 - Gráficos de Diagnóstico
 
-```{r}
+```{r fig.width=12, fig.height=10}
 #plot do modelo
 prediction <- predict(lm.primeiro.periodo)
 
-exp.prediction <- exp(prediction) - 1 #transformando o vetor de predição para a unidade original do problema (em ha).
-
-lm_prediction <- data.frame(pred = exp.prediction, obs = primeiro.periodo$cra)
+lm_prediction <- data.frame(pred = prediction, obs = primeiro.periodo$cra)
 
 ggplot(lm_prediction, aes(pred, obs)) +  geom_point(alpha = 0.1, position = position_jitter(width = 0.3)) + 
   labs(title="Previsão do modelo", x= "Predição", y="CRA") +  
@@ -176,7 +210,7 @@ ggplot(lm_prediction, aes(pred, obs)) +  geom_point(alpha = 0.1, position = posi
 
 ####1.3.2 - Gráficos de diagnósticos referentes aos resíduos
 Plotando previsões versus resíduos
-```{r}
+```{r fig.width=12, fig.height=10}
 predicoes = predict.lm(lm.primeiro.periodo,primeiro.periodo)
 residuos = primeiro.periodo$cra - predicoes
 plot(predicoes,residuos)
@@ -184,15 +218,16 @@ abline(h=0,col="blue",lty=2,lwd=2)
 
 ```
 Verificando se os resíduos seguem uma distribuição normal com média 0:
-```{r}
+```{r fig.width=12, fig.height=10}
 qqnorm(residuos)
 qqline(residuos, col = 2,lwd=2,lty=2)
 ```
 Verificando frequência dos resíduos
-```{r}
+```{r fig.width=12, fig.height=10}
 ggplot(lm.primeiro.periodo, aes(.resid)) + labs(title="Frequência de resíduos", x= "Resíduo", y="Frequência") + 
   geom_freqpoly(binwidth = 0.5) 
 ```
+
 
 
 ##2 - Segundo Periodo
@@ -232,9 +267,7 @@ corrplot(correlationMatrix2, method="circle", type="lower", order="hclust", addC
 ```{r}
 lm.segundo.periodo <- lm(cra ~ Cálculo.Diferencial.e.Integral.II + Matemática.Discreta + Programação.II + Teoria.dos.Grafos+ Fundamentos.de.Física.Clássica+ Laboratório.de.Programação.II, segundo.periodo)
 
-
-library(broom)
-tidy(lm.segundo.periodo, conf.int = TRUE)
+summary(lm.segundo.periodo)
 
 
 #plot do modelo
