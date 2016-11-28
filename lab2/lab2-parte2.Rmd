@@ -83,18 +83,25 @@ correlationMatrix <- cor(p1.p2)
 corrplot(correlationMatrix, method="circle", type="lower", order="hclust", addCoef.col = "black")
 ```
 
-Analisando a matriz de correlação das variáveis, observamos que grande parte possue uma correlaçao até 0.5 ou inferior, baseado nisso assumimos um treshhold de 0.65, ou seja, acima desse valor a correlação entre as variaveis e considerada alta. 
+Analisando a matriz de correlação das variáveis, observamos que grande parte possue uma correlaçao até 0.5 ou inferior, baseado nisso assumimos um treshold de 0.65, ou seja, acima desse valor a correlação entre as variaveis e considerada alta. 
 Com base na literatura, sabemos que variáveis com correlação alta e/ou p-valores altos influenciam negativamente na construção do modelo, por isso, para termos um modelo consistente vamos remover as variáveis que se comportam dessa forma.
 
+Analisando nosso modelo com todas as variáveis, vemos que a disciplina de LPT possui uma significancia que é considerada, porém, por experiência própria, sabemos que o desempenho nessa disciplina não possui um peso significativo no rendimento do aluno, por isso vamos remover essa variável e rodarmos novamente o modelo.
+
 ```{r}
-lm.p1p2.melhorado <-lm(CRA ~ . -LP1 -Grafos -P2, p1.p2)
-
+lm.p1p2.melhorado <-lm(CRA ~ . -LPT, p1.p2)
 summary(lm.p1p2.melhorado)
-
-
 ```
 
-As variaveis retiradas foram LPI, Grafos e Programaçao 2. Observando nosso modelo melhorado, chegamos a conclusão que as variáveis que foram removidas não influenciavam no modelo, pois o R² e o R² ajustado se mantiveram constantes, por isso, nosso modelo continua a explicar ~64% do CRA, em outras palavras, as disciplinas que estamos considerando explicam 64% do cra do aluno. 
+Analisando o modelo, agora sem LPT, concluímos que nosso feeling sobre essa disciplina estava correto, vemos que o R² e o R² ajustado permanecem praticamente constantes. Percebemos também que ao retirarmos LPT as variáveis LP1 e Grafos se mostraram significantes, o que nos diz que essa disciplina estava se mostrando significante devido sua relação com essas outras.
+
+As variáveis que se apresentaram mais significantes foram Discreta, P2, Grafos e LP1 vamos agora rodar o nosso modelo apenas com essas variáveis.
+```{r}
+lm.p1p2.melhorado2 <-lm(CRA ~ Discreta + P2 + Grafos + LP1, p1.p2)
+summary(lm.p1p2.melhorado2)
+```
+
+Com o nosso modelo melhorado, vemos que o R² ajustado aumentou, temos agora que nosso modelo consegue explicar ~65% da variação dos dados. 
 
 Vamos analisar mais profundamente o nosso modelo. 
 
@@ -160,7 +167,7 @@ ggplot(df1,aes(x = value)) +
 ```
 
 ###1.1 - Relacionamento entre variáveis.
-Nos gráficos acima podemos ver o relacionamento entre as variáveis. Podemos ver a curva de suas respectivas distribuições, com isso podemos dizer que a maioria se comporta como uma distribuição normal, isso significa que os dados estão bem distribuído e vemos também que não temos algum inviesamento que deve ser levado em consideração. Chegamos a conlusão que não será necessário aplicar alguma transformação nas variáveis. Podemos seguir adiante com nossa análise.
+Nos gráficos acima podemos ver o relacionamento entre as variáveis. No primeiro modelo proposto, a variável LP1 foi removida, vamos agora analisar se essa variável possui alguma influência significativa, quando está presente apenas as disciplinas do primeiro período.
 
 
 ###1.2 - Analisando Matriz de correlação
@@ -172,9 +179,18 @@ correlationMatrix1 <- cor(primeiro.periodo)
 corrplot(correlationMatrix1, method="circle", type="lower", order="hclust", addCoef.col = "black")
 ```
 
-Observe este gráfico atentamente. Variáveis bem correlacionadas com a variável resposta (CRA) produzirão modelos com resultados mais expressivos. Vemos que todas as nossas váriáveis possuem um correlação significativa com a variável resposta. A disciplina de Introdução a Computação é a que possue a maior correlação, por isso vamos explorar essa correlação mais a fundo montando um modelo de regressão linear apenas com essa variável.
+Nos gráficos acima podemos ver o relacionamento entre as variáveis. A disciplina de IC (Introdução a Computação) é a que possui a maior correlação com a variável resposta. 
+No primeiro modelo proposto, a variável LP1 foi removida, vamos agora analisar se essa variável possui alguma influência significativa, quando está presente apenas as disciplinas do primeiro período.
 
+```{r fig.width=12, fig.height=10}
+lm.p1.completo <- lm(primeiro.periodo$CRA ~ ., primeiro.periodo)
+summary(lm.p1.completo)
+```
 
+```{r fig.width=12, fig.height=10}
+lm.p1 <- lm(primeiro.periodo$CRA ~ . -LP1, primeiro.periodo)
+summary(lm.p1)
+```
 
 ##2 - Segundo Periodo
 Vamos filtrar nosso dataset original para utilizarmos apenas as disciplinas referentes ao primeiro período.
