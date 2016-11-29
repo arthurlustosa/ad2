@@ -93,7 +93,7 @@ lm.p1p2.melhorado <-lm(CRA ~ . -LPT, p1.p2)
 summary(lm.p1p2.melhorado)
 ```
 
-Analisando o modelo, agora sem LPT, concluímos que nosso feeling sobre essa disciplina estava correto, vemos que o R² e o R² ajustado permanecem praticamente constantes. Percebemos também que ao retirarmos LPT as variáveis LP1 e Grafos se mostraram significantes, o que nos diz que essa disciplina estava se mostrando significante devido sua relação com essas outras.
+Analisando o modelo, agora sem LPT, concluímos que nosso feeling sobre essa disciplina estava correto, vemos que o R² e o R² ajustado permanecem praticamente constantes e o RSE diminui. Percebemos também que ao retirarmos LPT as variáveis LP1 e Grafos se mostraram significantes, o que nos diz que essa disciplina estava se mostrando significante devido sua relação com essas outras.
 
 As variáveis que se apresentaram mais significantes foram Discreta, P2, Grafos e LP1 vamos agora rodar o nosso modelo apenas com essas variáveis.
 ```{r}
@@ -101,7 +101,7 @@ lm.p1p2.melhorado2 <-lm(CRA ~ Discreta + P2 + Grafos + LP1, p1.p2)
 summary(lm.p1p2.melhorado2)
 ```
 
-Com o nosso modelo melhorado, vemos que o R² ajustado aumentou, temos agora que nosso modelo consegue explicar ~65% da variação dos dados. 
+Com o nosso modelo melhorado, vemos que o R² ajustado aumentou, temos agora que nosso modelo consegue explicar ~65% da variação dos dados, o RSE diminui de 0.5057 para 0.4962.
 
 Vamos analisar mais profundamente o nosso modelo. 
 
@@ -188,19 +188,16 @@ summary(lm.p1.completo)
 ```
 
 ```{r fig.width=12, fig.height=10}
-lm.p1 <- lm(primeiro.periodo$CRA ~ . -LP1, primeiro.periodo)
+lm.p1 <- lm(primeiro.periodo$CRA ~ . -C1, primeiro.periodo)
 summary(lm.p1)
 ```
 
 ##2 - Segundo Periodo
-Vamos filtrar nosso dataset original para utilizarmos apenas as disciplinas referentes ao primeiro período.
+Vamos filtrar nosso dataset original para utilizarmos apenas as disciplinas referentes ao segundo período.
 ```{r fig.width=12, fig.height=10}
 #filtrando disciplinas
 segundo.periodo <- p1.p2 %>%
   select(C2, Discreta, P2, Grafos, Física, LP2, CRA)
-
-#removendo NaNs
-segundo.periodo <- na.omit(segundo.periodo)
 
 #plotando relacionamento entra as disciplinas
 ggpairs(segundo.periodo)
@@ -228,8 +225,30 @@ correlationMatrix2 <- cor(segundo.periodo)
 corrplot(correlationMatrix2, method="circle", type="lower", order="hclust", addCoef.col = "black")
 ```
 
+Observe com atenção o gráfico acima e veja a correlação entre as disciplinas. 
+
+```{r fig.width=12, fig.height=10}
+lm.p2.completo <- lm(segundo.periodo$CRA ~ ., segundo.periodo)
+summary(lm.p2.completo)
+```
+Montamos um modelo que leva em consideração todas as disciplinas do segundo período. Temos um R² 0.50 e um R² ajustado 0.64, ou seja, nosso modelo consegue explicar ~63% da dispersão dos dados. Porém, vamos tentar refiná-lo e utilizar apenas as variáveis que tiveram uma real significância.
+
+```{r fig.width=12, fig.height=10}
+lm.p2 <- lm(segundo.periodo$CRA ~ Discreta + P2 + Grafos, segundo.periodo)
+summary(lm.p2)
+```
+
+Após rodar novamente o modelo, percebemos que ao considerar apenas as variáveis mais significativas tivemos um aumento na porcentagem de explicação dos dados, nosso R² ajustado foi para 64% e o RSE sofreu uma redução de 0.51 para 0.50. Concluímos então, que nosso modelo fica mais consistente utilizando apenas essas variáveis. 
+
 
 ##3 - Conlusões 
+Uma das perguntas a serem respondidas com nossa análise, é ver qual dos períodos consegue explicar o desempenho do cra do aluno. Após analisar detalhadamente o nosso conjunto de dados, todas as variáveis juntas, depois deparadas por períodos, vamos levar em consideração o valor dos R² ajustado para definir qual período explica melhor o cra do aluno. 
+
+* 1º Período: R² ajustado 0.466, RSE 0.621
+* 2º Período: R² ajustado 0.645, RSE 0.505
+
+O segundo período explica melhor a dispersão dos dados, então concluimos que o 2ºP é melhor.
+
 
 ##4 - Prevendo Desempenho Próprio
 
