@@ -1,5 +1,6 @@
 ---
 title: "Lab2 - Regressão Linear"
+autor: "Arthur Lustosa"
 output: 
   html_document:
     toc : true
@@ -26,7 +27,7 @@ dados <- read.csv("dados/graduados.csv")
 Os dados usados são referentes ao histórico de alunos do curso de computação da UFCG. A tarefa é, utilizando regressão linear, explicar o desempenho acadêmico.
 
 O dataset inicial possui 15751 observações com 7 variáveis. No processo de leitura algumas alterações tiveram de ser feitas, encontramos muitos NaNs e tivemos que removelos para não influenciar nas análises que serão feitas. Depois calculamos os CRAs (Coeficiente de Rendimento Acadêmico) dos alunos. 
-```{r}
+```{r warning=F, message=F}
 #ordenando os dados pela matrícula
 graduados <- dados %>%
   arrange(matricula)
@@ -52,12 +53,12 @@ graduados.model.input <- graduados.clean %>%
   merge(graduados.cra)
 ```
 
+
+## Períodos Iniciais
 A ideia principal dessa análise é explicar o desempenho acadêmico final dos alunos de computação, analisando como foi o seu desempenho no início do curso. Para isso vamos analisar seus rendimentos no primeiro e no segundo período do curso, levando em consideração suas notas nas disciplinas cursadas e, usando regressão linear, tentar explicar seu desempenho final. Nossa análise será dividida por partes, primeiro vamos nos aprofundar no primeiro período, ver quais disciplinas mais afetam o desempenho do aluno, depois vamos ver quais disciplinas não influenciam, nesse caso vamos identificar as cadeiras que não tem valor em significância para o modelo que queremos construi e assim removê-las. Depois de selecionar as variáveis mais importantes vamos montar nosso modelo.
 
-##1 
 
-```{r fig.width=12, fig.height=10}
-
+```{r warning=F, message=F}
 #selecionando cra e disciplinas do primeiro e segundo período
 p1.p2 <- graduados.model.input %>%
   select(Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
@@ -75,7 +76,7 @@ summary(lm.p1p2)
 ```
 Temos agora nosso primeiro modelo com todas as variáveis (disciplinas do primeiro e do segundo período). Esse modelo consegue explicar ~64% (R2 ajustado) da variável alvo CRA. Mesmo com um bom percentual de explicação vamos refinar nosso modelo, primeiro vamos ver quais variáveis podem não estar influenciando nosso resultado e assim removê-las. Para iniciar nosso refinamento analisaremos a correlação entre as variáveis.
 
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #calculando matriz de correlação
 correlationMatrix <- cor(p1.p2)
 
@@ -88,7 +89,7 @@ Com base na literatura, sabemos que variáveis com correlação alta e/ou p-valo
 
 Analisando nosso modelo com todas as variáveis, vemos que a disciplina de LPT possui uma significancia que é considerada, porém, por experiência própria, sabemos que o desempenho nessa disciplina não possui um peso significativo no rendimento do aluno, por isso vamos remover essa variável e rodarmos novamente o modelo.
 
-```{r}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 lm.p1p2.melhorado <-lm(CRA ~ . -LPT, p1.p2)
 summary(lm.p1p2.melhorado)
 ```
@@ -96,7 +97,7 @@ summary(lm.p1p2.melhorado)
 Analisando o modelo, agora sem LPT, concluímos que nosso feeling sobre essa disciplina estava correto, vemos que o R² e o R² ajustado permanecem praticamente constantes e o RSE diminui. Percebemos também que ao retirarmos LPT as variáveis LP1 e Grafos se mostraram significantes, o que nos diz que essa disciplina estava se mostrando significante devido sua relação com essas outras.
 
 As variáveis que se apresentaram mais significantes foram Discreta, P2, Grafos e LP1 vamos agora rodar o nosso modelo apenas com essas variáveis.
-```{r}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 lm.p1p2.melhorado2 <-lm(CRA ~ Discreta + P2 + Grafos + LP1, p1.p2)
 summary(lm.p1p2.melhorado2)
 ```
@@ -105,7 +106,7 @@ Com o nosso modelo melhorado, vemos que o R² ajustado aumentou, temos agora que
 
 Vamos analisar mais profundamente o nosso modelo. 
 
-```{r}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 predicoes = predict.lm(lm.p1p2.melhorado ,p1.p2)
 
 #plot modelo
@@ -125,7 +126,7 @@ ggplot(lm_prediction, aes(pred, obs)) +  geom_point(alpha = 0.1, position = posi
 
 Gráficos de diagnósticos referentes aos resíduos.
 Plotando previsões versus resíduos
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 residuos = p1.p2$CRA - predicoes
 
 #plot residuos
@@ -133,20 +134,20 @@ plot(predicoes,residuos)
 abline(h=0,col="blue",lty=2,lwd=2)
 ```
 Verificando se os resíduos seguem uma distribuição normal com média 0:
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 qqnorm(residuos)
 qqline(residuos, col = 2,lwd=2,lty=2)
 ```
 Verificando frequência dos resíduos
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 ggplot(lm.p1p2.melhorado, aes(.resid)) + labs(title="Frequência de resíduos", x= "Resíduo", y="Frequência") + 
   geom_freqpoly(binwidth = 0.5) 
 ```
-Analisando os três gráficos mostrados acima, conseguimos ver que os resíduos possuem uma distribuição simétrica em relação a linha tracejada, não temos nenhum padrão que possa ser considerado o que significa que nosso modelo está bem elaborado.  No segundo gráfico, temos que os resíduos seguem uma distribuição normal com média zero, a sobreposição dos pontos sobre a linha vermelha nos mostra isso. No terceiro gŕafico observamos a a frequência dos nossos resíduos e vemos que ela tem um coportamento bem similiar a de uma normal.
+Analisando os três gráficos mostrados acima, conseguimos ver que os resíduos possuem uma distribuição simétrica em relação ao eixo zero, não temos nenhum padrão que possa ser considerado o que significa que nosso modelo está bem elaborado.  No segundo gráfico, temos que os resíduos seguem uma distribuição normal com média zero, a sobreposição dos pontos sobre a linha vermelha nos mostra isso. No terceiro gŕafico observamos a a frequência dos nossos resíduos e vemos que ela tem um coportamento bem similiar a de uma normal.
 
-##1 - Primeiro Periodo
+##1 - Primeiro Período
 Vamos filtrar nosso dataset original para utilizarmos apenas as disciplinas referentes ao primeiro período.
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #filtrando disciplinas
 primeiro.periodo <- p1.p2 %>%
   select(C1, Vetorial, LPT, P1, IC, LP1, CRA)
@@ -165,13 +166,13 @@ ggplot(df1,aes(x = value)) +
     facet_wrap(~variable, scales = "free_x") + 
     geom_histogram(aes(fill=..count..))
 ```
+No primeiro gráfico temos várias informações sobre nossas variáveis, a curva de sua distribuição, o plot de seus pontos e sua correlação. No segundo podemos ver o histograma de cada uma das disciplinas. A informação necessária que queremos tirar desses gráficos é observar o comportamento e distribuição de nossas variáveis. Como as curvas de suas distribuições se assemelham muito com a de uma distribuição normal concluimos que não será preciso aplicarmos nenhum procedimento de transformação nos dados.  
 
 ###1.1 - Relacionamento entre variáveis.
-Nos gráficos acima podemos ver o relacionamento entre as variáveis. No primeiro modelo proposto, a variável LP1 foi removida, vamos agora analisar se essa variável possui alguma influência significativa, quando está presente apenas as disciplinas do primeiro período.
-
+Nos gráficos acima podemos ver o relacionamento entre as variáveis. LPT é a disciplina que possui maior correlação com a variável resposta CRA.
 
 ###1.2 - Analisando Matriz de correlação
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #calculando matriz de correlação
 correlationMatrix1 <- cor(primeiro.periodo)
 
@@ -179,22 +180,25 @@ correlationMatrix1 <- cor(primeiro.periodo)
 corrplot(correlationMatrix1, method="circle", type="lower", order="hclust", addCoef.col = "black")
 ```
 
-Nos gráficos acima podemos ver o relacionamento entre as variáveis. A disciplina de IC (Introdução a Computação) é a que possui a maior correlação com a variável resposta. 
-No primeiro modelo proposto, a variável LP1 foi removida, vamos agora analisar se essa variável possui alguma influência significativa, quando está presente apenas as disciplinas do primeiro período.
+No gráfico acima podemos observar a correlação entre as variáveis.
 
-```{r fig.width=12, fig.height=10}
+```{r  warning=F, message=F}
 lm.p1.completo <- lm(primeiro.periodo$CRA ~ ., primeiro.periodo)
 summary(lm.p1.completo)
 ```
 
-```{r fig.width=12, fig.height=10}
+Para o modelo referente ao primeiro período o RSE vale 0.62 e o R² ajustado ~0.46. Utilizando a função summary temos um resumo do nosso modelo e de quais variáveis são importantes. Analisando a matriz de correlação vimos que as variáveis C1 e Vetorial possuem uma alta correlação e isso pode contribuir negativamente para o modelo, acontecendo uma colinearidade entre as variáveis, decidimos então remover a variável C1. 
+
+```{r warning=F, message=F}
 lm.p1 <- lm(primeiro.periodo$CRA ~ . -C1, primeiro.periodo)
 summary(lm.p1)
 ```
+Após remover a variável C1, concluímos que ela não influencia o nosso modelo, pois o R² ajustado permaneceu constante ~0.46.
+Concluímos nosso modelo refente ao primeiro período explicando aproximadamente 46% da dispersão dos dados. 
 
-##2 - Segundo Periodo
+##2 - Segundo Período
 Vamos filtrar nosso dataset original para utilizarmos apenas as disciplinas referentes ao segundo período.
-```{r fig.width=12, fig.height=10}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #filtrando disciplinas
 segundo.periodo <- p1.p2 %>%
   select(C2, Discreta, P2, Grafos, Física, LP2, CRA)
@@ -210,14 +214,14 @@ ggplot(df1,aes(x = value)) +
     facet_wrap(~variable, scales = "free_x") + 
     geom_histogram(aes(fill=..count..))
 ```
+Da mesma forma que observamos o primeiro período, temos os plots para o segundo. Nossas variáveis continuam com um bom comportamento para aplicarmos um modelo de regressão linear. 
+
+###2.1 - Relacionamento entre variáveis.
+Nos gráficos acima podemos ver o relacionamento entre as variáveis. Podemos ver a curva de suas respectivas distribuições, com isso podemos dizer que a maioria se comporta como uma distribuição normal, isso significa que os dados estão bem distribuído e vemos também que não temos algum enviesamento que deve ser levado em consideração. Chegamos a conlusão que não será necessário aplicar alguma transformação nas variáveis. Podemos seguir adiante com nossa análise.
 
 
-###1.1 - Relacionamento entre variáveis.
-Nos gráficos acima podemos ver o relacionamento entre as variáveis. Podemos ver a curva de suas respectivas distribuições, com isso podemos dizer que a maioria se comporta como uma distribuição normal, isso significa que os dados estão bem distribuído e vemos também que não temos algum inviesamento que deve ser levado em consideração. Chegamos a conlusão que não será necessário aplicar alguma transformação nas variáveis. Podemos seguir adiante com nossa análise.
-
-
-###1.2 - Analisando Matriz de correlação
-```{r fig.width=12, fig.height=10}
+###2.2 - Analisando Matriz de correlação
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #calculando matriz de correlação
 correlationMatrix2 <- cor(segundo.periodo)
 
@@ -225,15 +229,15 @@ correlationMatrix2 <- cor(segundo.periodo)
 corrplot(correlationMatrix2, method="circle", type="lower", order="hclust", addCoef.col = "black")
 ```
 
-Observe com atenção o gráfico acima e veja a correlação entre as disciplinas. 
+Observe com atenção o gráfico acima e veja a correlação entre as disciplinas. A disciplina que possui maior correlação com a variável resposta é Matemática Discreta. 
 
-```{r fig.width=12, fig.height=10}
+```{r warning=F, message=F}
 lm.p2.completo <- lm(segundo.periodo$CRA ~ ., segundo.periodo)
 summary(lm.p2.completo)
 ```
 Montamos um modelo que leva em consideração todas as disciplinas do segundo período. Temos um R² 0.50 e um R² ajustado 0.64, ou seja, nosso modelo consegue explicar ~63% da dispersão dos dados. Porém, vamos tentar refiná-lo e utilizar apenas as variáveis que tiveram uma real significância.
 
-```{r fig.width=12, fig.height=10}
+```{r  warning=F, message=F}
 lm.p2 <- lm(segundo.periodo$CRA ~ Discreta + P2 + Grafos, segundo.periodo)
 summary(lm.p2)
 ```
