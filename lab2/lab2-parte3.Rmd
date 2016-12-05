@@ -1,0 +1,57 @@
+---
+title: "Lab2 - Regressão Linear"
+autor: "Arthur Lustosa"
+output: 
+  html_document:
+    toc : true
+    toc_float: true
+    
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(reshape2)
+library(GGally)
+library(ggplot2)
+library(corrplot)
+```
+
+
+## Lendo os dados
+
+```{r}
+dados <- read.csv("dados/graduados.csv")
+```
+
+```{r}
+#tutorial caret
+library(caret)
+
+#particionando dados para treino 75%
+in.train <- createDataPartition(y=dataset$variavelRespota, p = 0.75)
+
+#selecionando linhas para treomp
+mtcars.train <- mtcars[in.train[[1]],]
+mtcars.test <- mtcars[in.train[[1]],]
+
+#treinando o modelo
+model.mtcars_lm <- train(mpg ~ wt #funcao
+                        , mtcars.train #dados
+                        , method = "lm") #metodo
+
+#fazendo predicao
+mtcars.pred <- predict(model.mtcars_lm, mtcars.test)
+
+#calculando RMSE 
+sqrt(mean(mtcarts.pred-mtcars.test$mpg)^2) #significa o quanto nosso modelo vai predizer, de acordo com o contexto do problema.
+
+#exemplo com regularizacao, a diferença entre a regressao e a regularizacao, na regressao normal vamos minimizar o erro e na regularização vamos minimizar o erro e o número de variáveis. 
+#diferenca entre ridge e lasso é a distância. Ridge: L1 e Lasso L2
+
+#importancia das variaveis
+roc_imp2 <- varImp(lasso, scale=F)
+plot(roc_imp2)
+
+
+```
+
