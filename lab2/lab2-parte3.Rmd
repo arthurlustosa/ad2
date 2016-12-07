@@ -27,6 +27,7 @@ graduados.test <- read.csv("dados/graduados_teste.csv")
 
 ```{r}
 colnames(graduados.train) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
+colnames(graduados.test) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
 ```
 
 ## Conhecendo os dados
@@ -34,12 +35,15 @@ Os dados usados são referentes ao histórico de alunos do curso de computação
 
 O dataset inicial possui 15751 observações com 7 variáveis. No processo de leitura algumas alterações tiveram de ser feitas, encontramos muitos NaNs e tivemos que removelos para não influenciar nas análises que serão feitas. Depois calculamos os CRAs (Coeficiente de Rendimento Acadêmico) dos alunos. 
 ```{r warning=F, message=F}
+
+# DADOS TREINO
+
 #ordenando os dados pela matrícula
-graduados <- graduados.train %>%
+graduados.train <- graduados.train %>%
   arrange(matricula)
 
 #filtrando dados e removendo os NaNs
-graduados.clean <- graduados %>%
+graduados.clean <- graduados.train %>%
   filter(!is.na(media))
 
 #calculando CRA dos alunos e salvando numa coluna
@@ -57,25 +61,57 @@ graduados.model.input <- graduados.clean %>%
   mutate(disciplina = as.factor(gsub(" ", ".", disciplina))) %>%
   dcast(matricula ~disciplina, mean) %>%
   merge(graduados.cra)
+
+#selecionando cra e disciplinas do primeiro e segundo período
+p1.p2.train <- graduados.model.input %>%
+  select(Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
+
+#renomeando colunas
+colnames(p1.p2.train) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
+
+
+# DADOS TESTE
+
+#ordenando os dados pela matrícula
+graduados.test <- graduados.test %>%
+  arrange(matricula)
+
+#filtrando dados e removendo os NaNs
+graduados.clean <- graduados.test %>%
+  filter(!is.na(media))
+
+#calculando CRA dos alunos e salvando numa coluna
+graduados.cra <- graduados.clean %>%
+  group_by(matricula) %>%
+  mutate(cra.contrb = media*creditos) %>%
+  summarise(cra = sum(cra.contrb)/sum(creditos))
+
+#utilizando a função dcast para deixar o dataset na forma ideal para a análise
+graduados.model.input <- graduados.clean %>%
+  group_by(matricula, disciplina) %>%
+  filter(media == max(media))%>%
+  ungroup() %>%
+  select(matricula, disciplina, media) %>%
+  mutate(disciplina = as.factor(gsub(" ", ".", disciplina))) %>%
+  dcast(matricula ~disciplina, mean) %>%
+  merge(graduados.cra)
+
+#selecionando cra e disciplinas do primeiro e segundo período
+p1.p2.test <- graduados.model.input %>%
+  select(Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
+
+#renomeando colunas
+colnames(p1.p2.test) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
+
+#removendo NaNs
+p1.p2.test <- na.omit(p1.p2.test)
 ```
 
 ## Períodos Iniciais
 
 ```{r warning=F, message=F}
-#selecionando cra e disciplinas do primeiro e segundo período
-p1.p2 <- graduados.model.input %>%
-  select(Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
 
-#renomeando colunas
-colnames(p1.p2) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
 
-#removendo NaNs
-p1.p2 <- na.omit(p1.p2)
-
-#calculando modelo linear
-lm.p1p2 <-lm(CRA ~ ., p1.p2)
-
-summary(lm.p1p2)
 ```
 
 O que fazer:
