@@ -21,12 +21,12 @@ library(caret)
 ## Lendo os dados
 
 ```{r}
-graduados.train <- read.csv("dados/graduados_treino_base.csv")
-graduados.test <- read.csv("dados/graduados_treino_avaliacao.csv")
+graduados.train <- read.csv("dados/graduados_treino.csv")
+graduados.test <- read.csv("dados/graduados_teste.csv")
 ```
 
 ```{r}
-colnames(graduados.train) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "media")
+colnames(graduados.train) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
 ```
 
 ## Conhecendo os dados
@@ -45,8 +45,8 @@ graduados.clean <- graduados %>%
 #calculando CRA dos alunos e salvando numa coluna
 graduados.cra <- graduados.clean %>%
   group_by(matricula) %>%
-  mutate(cra.contrb = media*periodo_evasao) %>%
-  summarise(cra = sum(cra.contrb)/sum(periodo_evasao))
+  mutate(cra.contrb = media*creditos) %>%
+  summarise(cra = sum(cra.contrb)/sum(creditos))
 
 #utilizando a função dcast para deixar o dataset na forma ideal para a análise
 graduados.model.input <- graduados.clean %>%
