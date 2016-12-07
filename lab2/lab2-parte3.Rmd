@@ -21,7 +21,12 @@ library(caret)
 ## Lendo os dados
 
 ```{r}
-dados <- read.csv("dados/graduados.csv")
+graduados.train <- read.csv("dados/graduados_treino_base.csv")
+graduados.test <- read.csv("dados/graduados_treino_avaliacao.csv")
+```
+
+```{r}
+colnames(graduados.train) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "media")
 ```
 
 ## Conhecendo os dados
@@ -30,7 +35,7 @@ Os dados usados são referentes ao histórico de alunos do curso de computação
 O dataset inicial possui 15751 observações com 7 variáveis. No processo de leitura algumas alterações tiveram de ser feitas, encontramos muitos NaNs e tivemos que removelos para não influenciar nas análises que serão feitas. Depois calculamos os CRAs (Coeficiente de Rendimento Acadêmico) dos alunos. 
 ```{r warning=F, message=F}
 #ordenando os dados pela matrícula
-graduados <- dados %>%
+graduados <- graduados.train %>%
   arrange(matricula)
 
 #filtrando dados e removendo os NaNs
@@ -40,8 +45,8 @@ graduados.clean <- graduados %>%
 #calculando CRA dos alunos e salvando numa coluna
 graduados.cra <- graduados.clean %>%
   group_by(matricula) %>%
-  mutate(cra.contrb = media*creditos) %>%
-  summarise(cra = sum(cra.contrb)/sum(creditos))
+  mutate(cra.contrb = media*periodo_evasao) %>%
+  summarise(cra = sum(cra.contrb)/sum(periodo_evasao))
 
 #utilizando a função dcast para deixar o dataset na forma ideal para a análise
 graduados.model.input <- graduados.clean %>%
@@ -87,22 +92,37 @@ O que fazer:
 Usamos a biblioteca caret para particionar os dados e montarmos nosso conjunto de teste.
 ```{r}
 #separando os dados em treino e teste
-p1.p2.train <- createDataPartition(y=p1.p2$CRA, p = 0.90)
+in.train <- createDataPartition(y=p1.p2$CRA, p = 0.90)
+
 ```
 
 
 Criando modelo de regressão do tipo Ridge que utiliza todas as variáveis.
 ```{r}
-model.rigde.p1.p2.train <- train(p1.p2 ~ CRA #funcao
-                        , p1.p2.train.train #dados
+p1.p2.train <- p1.p2[in.train[[1]],]
+p1.p2.test <- p1.p2[-in.train[[1]],]
+
+
+model.rigde.p1.p2.train <- train(CRA ~ . #funcao
+                        , p1.p2.train #dados
                         , method = "ridge") #metodo
+
+model.rigde.p1.p2.train 
+
+```
+```{r}
+p1.p2.pred <- predict(model.rigde.p1.p2.train, p1.p2.test)
+#RMSE
+sqrt(mean((p1.p2.pred-p1.p2.test$CRA)^2))
 ```
 
 Criando modelo de regressão do tipo Lasso que utiliza todas as variáveis.
 ```{r}
-model.lasso.p1.p2.train <- train(p1.p2 ~ CRA #funcao
-                        , p1.p2.train.train #dados
-                        , method = "ridge") #metodo
+model.lasso.p1.p2.train <- train(CRA ~. #funcao
+                        , p1.p2.train #dados
+                        , method = "lasso") #metodo
+
+model.lasso.p1.p2.train
 ```
 
 
