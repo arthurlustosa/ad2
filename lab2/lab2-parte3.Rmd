@@ -11,7 +11,6 @@ output:
 ```{r setup, include=FALSE}
 library(dplyr)
 library(reshape2)
-library(GGally)
 library(ggplot2)
 library(corrplot)
 library(caret)
@@ -134,16 +133,7 @@ O que fazer:
 8. Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
 
 
-Usamos a biblioteca caret para particionar os dados e montarmos nosso conjunto de teste.
-
-
-
-
-Criando modelo de regressão do tipo Ridge que utiliza todas as variáveis.
-
-
-
-
+##2 Ridge
 ```{r}
 #Modelo Ridge
 set.seed(825)
@@ -151,38 +141,157 @@ set.seed(825)
 ctrl <- trainControl(method = "repeatedcv", repeats = 5, number = 10)
 lambda.grid <- expand.grid(lambda = 10^seq(10, -2, length=100))
 
-model.rigde.p1.p2 <- train(CRA ~ . ,
-                                 data = p1.p2.train,
-                                 method = "ridge",
-                                 tuneGrid = lambda.grid,
-                                 trControl = ctrl,
-                                 metric = 'RMSE',
-                                 preProcess=c('scale', 'center'))
-
-model.rigde.p1.p2
-
+ridge <- train(CRA ~ . ,data = p1.p2.train,
+                        method = "ridge",
+                        tuneGrid = lambda.grid,
+                        trControl = ctrl,
+                        metric = 'RMSE',
+                        preProcess=c('scale', 'center'))
 ```
 
-Criando modelo de regressão do tipo Lasso que utiliza todas as variáveis.
+A função train utilizou um vetor com 100 possíveis valores para lambda e achou o valor ótimo (RMSE mais baixo).
 
 ```{r}
+ridge
+```
+
+Depois de criado o modelo iremos agora gerar a previsão.
+
+```{r}
+ridge_prediction <- predict(ridge, p1.p2.train)
+
+ridge_prediction <- data.frame(pred = ridge_prediction, obs = p1.p2.train$CRA)
+round(defaultSummary(ridge_prediction), digits = 3)
+```
+
+##3 Lasso
+Iremos agora criar um modelo utilizando o Lasso. O Lasso é uma técnica que, além de controlar o overfitting, aplica a seleção de variáveis que melhor explicam a variável resposta. Para criar esse modelo usaremos a biblioteca caret.
+```{r}
 #Modelo Lasso
-model.lasso.p1.p2 <- train(CRA ~ . ,
-                                 data = p1.p2.train,
-                                 method = "lasso",
-                                 tuneLength = 10,
-                                 metric = 'RMSE',
-                                 preProcess=c('scale', 'center'))
+set.seed(825)
+lasso <- train(CRA ~ . ,data = p1.p2.train,
+                        method = "lasso",
+                        tuneLength = 10,
+                        metric = 'RMSE',
+                        preProcess=c('scale', 'center'))
+plot(lasso)
+```
+A função train tentou 10 valores para fraction e achou o valor ótimo (RMSE mais baixo).
 
-model.lasso.p1.p2 
+```{r}
+lasso
+```
 
-#importancia das variaveis
-roc_imp2 <- varImp(model.lasso.p1.p2, scale=F)
-plot(roc_imp2)
+Depois de criado o modelo iremos agora gerar a previsão.
+
+```{r}
+lasso_prediction <- predict(lasso, p1.p2.train)
+
+lasso_prediction <- data.frame(pred = lasso_prediction, obs = p1.p2.train$CRA)
+round(defaultSummary(lasso_prediction), digits = 3)
 
 ```
 
 
+##4 Comparando os modelos
+
+```{r}
+compare <- ridge_prediction
+compare$model <- "RIDGE"
+
+lasso_prediction$model <- "LASSO"
+
+compare <- rbind(compare, lasso_prediction)
+
+ggplot(compare, aes(x = pred, y = obs)) + 
+  geom_point(alpha = 0.5, position = position_jitter(width=0.2)) + 
+  facet_grid(. ~ model) + 
+  geom_abline() +
+  ggtitle("Observado x Previsão (validação)")
+
+```
+
+```{r}
+round(defaultSummary(ridge_prediction), digits = 3)
+round(defaultSummary(lasso_prediction), digits = 3)
+```
+O melhor modelo será aquele que possuir o RMSE mais baixo. Como podemos ver, ambos os modelos produziram um RMSE próximo, ou seja, não temos uma diferença tão significativa entre os modelos. Entre o Lasso e o Ridge ficamos com o Ridge que ficou com RMSE ~0.459
 
 
+##5 Importância das Variáveis
 
+```{r}
+plot(varImp(ridge, scale = FALSE))
+plot(varImp(lasso, scale = FALSE))
+```
+
+```{r}
+ggplot(data = p1.p2.train, aes(x = CRA, y = C2)) +
+  geom_point()
+```
+Vamos observar um pouco mais a fundo a relação entre C2 e o CRA, já que os nossos modelos apontaram essa variável como sendo a mais importante. Vamos que C2 e CRA tem um comportamento bem linear, temos alguns outliers, mas podemos concluir que quanto mais alta a nota em C2 consequentemente mais alto o CRA.
+
+
+##6 Re-treino Ridge
+```{r}
+
+r.ridge <- train(CRA ~ . ,data = p1.p2.train,
+                        method = "ridge",
+                        tuneGrid = lambda.grid,
+                        trControl = ctrl,
+                        metric = 'RMSE',
+                        preProcess=c('scale', 'center'))
+r.ridge 
+plot(r.lasso)
+```
+
+```{r}
+#predicao do re-treino
+r.ridge_prediction <- predict(r.ridge, p1.p2.test)
+
+r.ridge_prediction <- data.frame(pred = r.ridge_prediction, obs = p1.p2.test$CRA)
+round(defaultSummary(r.ridge_prediction), digits = 3)
+```
+
+##7 Treino com dados de teste
+
+##8 Comparando Modelos com treino e teste
+
+Para termos uma comparação mais robusta, propusemos um modelo de regressão linear. Primeiro rodamos com todas as variáveis, depois só com as mais significativas e tivemos o seguinte resultado.  
+```{r}
+lm <- train(CRA ~ . ,p1.p2.train, method= "lm", metric="RMSE") 
+summary(lm)
+
+lmFit <- train(CRA ~ ., p1.p2.train %>% select(-C1, -LP2), method= "lm", metric="RMSE") 
+summary(lmFit)
+
+lmFit_prediction <- predict(lmFit, p1.p2.train)
+
+lmFit_prediction <- data.frame(pred = lmFit_prediction, obs = p1.p2.train$CRA)
+round(defaultSummary(lmFit_prediction), digits = 3)
+
+```
+Nosso modelo linear apresentou um RMSE parecido com o dos modelos já expostos, porém com um alto R-squared. No gráfico abaixo podemos analisar nossa comparação.
+```{r}
+
+linear_rmse <- round(defaultSummary(lmFit_prediction), digits = 3)[1]
+ridge_rmse <- round(defaultSummary(ridge_prediction), digits = 3)[1]
+lasso_rmse <- round(defaultSummary(lasso_prediction), digits = 3)[1]
+toPlot <- data.frame(RMSE = c(linear_rmse, ridge_rmse, lasso_rmse), 
+                     Modelo = c("Linear Regression", "Ridge", "Lasso"))
+
+
+ggplot(toPlot, aes(x=reorder(Modelo, -RMSE), y=RMSE)) + 
+  geom_bar(stat="identity") + 
+  labs(x='Modelo', y='RMSE') +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.background=element_blank()) +
+  coord_flip() + 
+  geom_text(aes(label = RMSE))
+```
+
+O melhor modelo será aquele que possuir o RMSE mais baixo. Utilizando essa métrica o melhor modelo gerado foi o utilizando Ridge com o cross validation seguido pelo modelo utilizando regressão linear e depois o Lasso. Vale salientar que a diferença entre os modelos é baixissíma.
+
+
+##9 Melhorando o modelo
+
+##10 Conclusões
