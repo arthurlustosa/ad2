@@ -69,25 +69,8 @@ p1.p2.train <- graduados.model.input %>%
 #renomeando colunas
 colnames(p1.p2.train) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
 
-p1.p2.train[p1.p2.train=="NaN"] = NA 
-
-p1.p2.train$media <- rowMeans(p1.p2.train, na.rm = T) %>%
-  mutate()
 
 
-
-for (i in 1:nrow(p1.p2.train)){
-  if (is.na(p1.p2.train[i,7])){
-
-    p1.p2.train[i,7] = 
-    
-  }
-}
-
-
-p1.p2.train$C2[p1.p2.train$C2=="NaN"] = rowMeans(p1.p2.train, na.rm = T)
-p1.p2.train <- na.omit(p1.p2.train)
-p1.p2.train <- rowMeans(p1.p2.train, na.rm = T)
 # DADOS TESTE
 
 #ordenando os dados pela matrícula
@@ -121,16 +104,25 @@ p1.p2.test <- graduados.model.input %>%
 #renomeando colunas
 colnames(p1.p2.test) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
 
-#removendo NaNs
-p1.p2.test <- na.omit(p1.p2.test)
+
+
+#substituindo NaN pelo CRA
+for (i in 1:nrow(p1.p2.train)){
+  for (j in 1:ncol(p1.p2.train)){
+    if(is.na(p1.p2.train[i,j])){
+      p1.p2.train[i,j] = p1.p2.train$CRA[i]
+      
+    }
+    if(is.na(p1.p2.test[i,j])){
+      p1.p2.test[i, j] = p1.p2.test$CRA[i]
+    }
+  }
+}
+
+
 ```
 
-## Períodos Iniciais
 
-```{r warning=F, message=F}
-
-
-```
 
 O que fazer:
 1. Separe os dados em treino e teste (por exemplo 90% para treino 10% para teste).
@@ -144,73 +136,52 @@ O que fazer:
 
 
 Usamos a biblioteca caret para particionar os dados e montarmos nosso conjunto de teste.
-```{r}
-#separando os dados em treino e teste
-in.train <- createDataPartition(y=p1.p2$CRA, p = 0.90)
 
-```
+
 
 
 Criando modelo de regressão do tipo Ridge que utiliza todas as variáveis.
+
+
+
+
 ```{r}
-p1.p2.train <- p1.p2[in.train[[1]],]
-p1.p2.test <- p1.p2[-in.train[[1]],]
+#Modelo Ridge
+ctrl <- trainControl(method = "repeatedcv", repeats = 5, number = 5)
+lambda.grid <- expand.grid(lambda = 10^seq(10, -2, length=100))
 
+model.rigde.p1.p2 <- train(CRA ~ . ,
+                                 data = p1.p2.train,
+                                 method = "ridge",
+                                 tuneGrid = lambda.grid,
+                                 trControl = ctrl,
+                                 metric = 'RMSE',
+                                 preProcess=c('scale', 'center'))
 
-model.rigde.p1.p2.train <- train(CRA ~ . #funcao
-                        , p1.p2.train #dados
-                        , method = "ridge") #metodo
+model.rigde.p1.p2
 
-model.rigde.p1.p2.train 
-
-```
-```{r}
-p1.p2.pred <- predict(model.rigde.p1.p2.train, p1.p2.test)
-#RMSE
-sqrt(mean((p1.p2.pred-p1.p2.test$CRA)^2))
 ```
 
 Criando modelo de regressão do tipo Lasso que utiliza todas as variáveis.
-```{r}
-model.lasso.p1.p2.train <- train(CRA ~. #funcao
-                        , p1.p2.train #dados
-                        , method = "lasso") #metodo
-
-model.lasso.p1.p2.train
-```
-
-
-
 
 ```{r}
-#tutorial caret
-library(caret)
+#Modelo Lasso
+model.lasso.p1.p2 <- train(CRA ~ . ,
+                                 data = p1.p2.train,
+                                 method = "lasso",
+                                 tuneLength = 10,
+                                 metric = 'RMSE',
+                                 preProcess=c('scale', 'center'))
 
-#particionando dados para treino 75%
-in.train <- createDataPartition(y=dataset$variavelRespota, p = 0.75)
-
-#selecionando linhas para treomp
-mtcars.train <- mtcars[in.train[[1]],]
-mtcars.test <- mtcars[in.train[[1]],]
-
-#treinando o modelo
-model.mtcars_lm <- train(mpg ~ wt #funcao
-                        , mtcars.train #dados
-                        , method = "lm") #metodo
-
-#fazendo predicao
-mtcars.pred <- predict(model.mtcars_lm, mtcars.test)
-
-#calculando RMSE 
-sqrt(mean(mtcarts.pred-mtcars.test$mpg)^2) #significa o quanto nosso modelo vai predizer, de acordo com o contexto do problema.
-
-#exemplo com regularizacao, a diferença entre a regressao e a regularizacao, na regressao normal vamos minimizar o erro e na regularização vamos minimizar o erro e o número de variáveis. 
-#diferenca entre ridge e lasso é a distância. Ridge: L1 e Lasso L2
+model.lasso.p1.p2 
 
 #importancia das variaveis
-roc_imp2 <- varImp(lasso, scale=F)
+roc_imp2 <- varImp(model.lasso.p1.p2, scale=F)
 plot(roc_imp2)
 
-
 ```
+
+
+
+
 
