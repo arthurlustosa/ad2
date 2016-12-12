@@ -111,14 +111,13 @@ for (i in 1:nrow(p1.p2.train)){
   for (j in 1:ncol(p1.p2.train)){
     if(is.na(p1.p2.train[i,j])){
       p1.p2.train[i,j] = p1.p2.train$CRA[i]
-      
+
     }
     if(is.na(p1.p2.test[i,j])){
       p1.p2.test[i, j] = p1.p2.test$CRA[i]
     }
   }
 }
-
 
 ```
 
@@ -147,7 +146,9 @@ Criando modelo de regressão do tipo Ridge que utiliza todas as variáveis.
 
 ```{r}
 #Modelo Ridge
-ctrl <- trainControl(method = "repeatedcv", repeats = 5, number = 5)
+set.seed(825)
+
+ctrl <- trainControl(method = "repeatedcv", repeats = 5, number = 10)
 lambda.grid <- expand.grid(lambda = 10^seq(10, -2, length=100))
 
 model.rigde.p1.p2 <- train(CRA ~ . ,
