@@ -1,5 +1,5 @@
 ---
-title: "Lab2 - Regressão Linear"
+title: "Predição/nUtilizando Ridge e Lasso"
 autor: "Arthur Lustosa"
 output: 
   html_document:
@@ -8,6 +8,12 @@ output:
     
 ---
 
+#Predição
+##Utilizando Ridge e Lasso
+
+Nessa análise construíremos modelos preditivos de regressão para predição do CRA (Coeficiente de Rendimento Acadêmico) baseado nas notas obtidas nas disciplinas do primeiro e do segundo período dos alunos de Ciência da Computação - UFCG.
+
+Bibliotecas utilizadas
 ```{r setup, include=FALSE}
 library(dplyr)
 library(reshape2)
@@ -17,23 +23,32 @@ library(caret)
 ```
 
 
-## Lendo os dados
-
+##Lendo os dados
+Recebemos os dataset já separados em treino e test.
 ```{r}
 graduados.train <- read.csv("dados/graduados_treino.csv")
 graduados.test <- read.csv("dados/graduados_teste.csv")
 ```
 
-```{r}
+##Conhecendo os dados
+
+Um prepocessamento nos dados foi necessário antes de iniciarmos nossa análise. Foi preciso calcular o CRA dos alunos e selecionar apenas as disciplinas referentes ao primeiro e segundo perído do curso. Após o processamento nossos dados ficaram no seguinte formato:
+
+*matricula
+*ano_evasao
+*periodo_evasao
+*cod_disciplina
+*disciplina
+*creditos
+*media
+
+```{r, echo=F}
 colnames(graduados.train) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
 colnames(graduados.test) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
 ```
 
-## Conhecendo os dados
-Os dados usados são referentes ao histórico de alunos do curso de computação da UFCG. A tarefa é, utilizando regressão linear, explicar o desempenho acadêmico.
 
-O dataset inicial possui 15751 observações com 7 variáveis. No processo de leitura algumas alterações tiveram de ser feitas, encontramos muitos NaNs e tivemos que removelos para não influenciar nas análises que serão feitas. Depois calculamos os CRAs (Coeficiente de Rendimento Acadêmico) dos alunos. 
-```{r warning=F, message=F}
+```{r warning=F, message=F, echo=F}
 
 # DADOS TREINO
 
@@ -67,7 +82,6 @@ p1.p2.train <- graduados.model.input %>%
 
 #renomeando colunas
 colnames(p1.p2.train) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
-
 
 
 # DADOS TESTE
@@ -104,7 +118,6 @@ p1.p2.test <- graduados.model.input %>%
 colnames(p1.p2.test) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
 
 
-
 #substituindo NaN pelo CRA
 for (i in 1:nrow(p1.p2.train)){
   for (j in 1:ncol(p1.p2.train)){
@@ -121,20 +134,37 @@ for (i in 1:nrow(p1.p2.train)){
 ```
 
 
+Após processarmos os dados tivemos que fazer mais algumas alterações para os dados ficassem no formato necessário para criar os modelos. Os atributos dos dados ficaram sendo as disciplinas e a última coluna como sendo a variável alvo. As linhas são as notas dos alunos, a matrícula foi removida devido a confidencialidade dos dados.
 
-O que fazer:
-1. Separe os dados em treino e teste (por exemplo 90% para treino 10% para teste).
-2. Usando todas as variáveis disponíveis (disciplinas do primeiro e segundo período), use validação cruzada (nos dados de treino) para tunar um modelo de regressão Ridge.
-3. Mesmo que item acima mas usando um modelo de regressão Lasso.
-4. Compare os dois modelos nos dados de teste em termos de RMSE.
-5. Quais as variáveis mais importantes segundo o modelo de regressão Lasso? Alguma variável foi descartada? Quais?
-6. Re-treine o melhor modelo (dessa vez nos dados de treino sem validação cruzada) e reporte o RMSE no teste.
-7. Use o modelo treinado em 6 e aplique nos dados de teste que vamos disponibilizar.
-8. Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
+```{r}
+head(p1.p2.train)
+```
+Antes de iniciarmos nossa análise vamos observar a correlação das variáveis em relação a variável alvo.
+
+```{r fig.width=12, fig.height=10, warning=F, message=F}
+#calculando matriz de correlação
+correlationMatrix <- cor(p1.p2.train)
+
+#utlizamos a bibliota corrplot para montar o gráfico com as correlações
+corrplot(correlationMatrix, method="circle", type="lower", order="hclust", addCoef.col = "black")
+```
+Vemos que a disciplina de cálculo 2, LPT e matemática discreta são as disciplinas que possuem correlação mais alta com o CRA do aluno. 
+
+Vamos agora para nossa análise preditiva, para isso vamos seguir os passos descritos abaixo:
+
+*1.* Usando todas as variáveis disponíveis (disciplinas do primeiro e segundo período), use validação cruzada (nos dados de treino) para tunar um modelo de regressão Ridge.
+*2.* Mesmo que item acima mas usando um modelo de regressão Lasso.
+*3.* Compare os dois modelos nos dados de teste em termos de RMSE.
+*4.* Quais as variáveis mais importantes segundo o modelo de regressão Lasso? Alguma variável foi descartada? Quais?
+*5.* Re-treine o melhor modelo (dessa vez nos dados de treino sem validação cruzada) e reporte o RMSE no teste.
+*6.* Use o modelo treinado em 6 e aplique nos dados de teste que vamos disponibilizar.
+*7.* Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
 
 
 ##2 Ridge
-```{r}
+O modelo inicial utiliza o Ridge. A Ridge Regression é um método de regularização do modelo que tem como principal objetivo suavizar atributos que sejam relacionados uns aos outros e que aumentam o ruído no modelo (A.K.A multicolinearidade). Para aplicarmos o Ridge utilizamos a biblioteca caret. 
+
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #Modelo Ridge
 set.seed(825)
 
@@ -147,6 +177,7 @@ ridge <- train(CRA ~ . ,data = p1.p2.train,
                         trControl = ctrl,
                         metric = 'RMSE',
                         preProcess=c('scale', 'center'))
+plot(ridge)
 ```
 
 A função train utilizou um vetor com 100 possíveis valores para lambda e achou o valor ótimo (RMSE mais baixo).
@@ -166,7 +197,7 @@ round(defaultSummary(ridge_prediction), digits = 3)
 
 ##3 Lasso
 Iremos agora criar um modelo utilizando o Lasso. O Lasso é uma técnica que, além de controlar o overfitting, aplica a seleção de variáveis que melhor explicam a variável resposta. Para criar esse modelo usaremos a biblioteca caret.
-```{r}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 #Modelo Lasso
 set.seed(825)
 lasso <- train(CRA ~ . ,data = p1.p2.train,
@@ -195,7 +226,7 @@ round(defaultSummary(lasso_prediction), digits = 3)
 
 ##4 Comparando os modelos
 
-```{r}
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 compare <- ridge_prediction
 compare$model <- "RIDGE"
 
@@ -225,7 +256,9 @@ plot(varImp(ridge, scale = FALSE))
 plot(varImp(lasso, scale = FALSE))
 ```
 
-```{r}
+Acima temos o gráfico com a importância das variáveis para cada modelo, primeiro para o ridge depois para o lasso. Concluímos que as variáveis possuem a mesma importância para cada modelo.
+
+```{r fig.width=12, fig.height=10, warning=F, message=F}
 ggplot(data = p1.p2.train, aes(x = CRA, y = C2)) +
   geom_point()
 ```
@@ -233,16 +266,16 @@ Vamos observar um pouco mais a fundo a relação entre C2 e o CRA, já que os no
 
 
 ##6 Re-treino Ridge
-```{r}
-
-r.ridge <- train(CRA ~ . ,data = p1.p2.train,
+```{r fig.width=12, fig.height=10, warning=F, message=F}
+p1.p2.test <- na.omit(p1.p2.test)
+r.ridge <- train(CRA ~ . ,data = p1.p2.test,
                         method = "ridge",
                         tuneGrid = lambda.grid,
                         trControl = ctrl,
                         metric = 'RMSE',
                         preProcess=c('scale', 'center'))
 r.ridge 
-plot(r.lasso)
+plot(r.ridge)
 ```
 
 ```{r}
@@ -290,6 +323,57 @@ ggplot(toPlot, aes(x=reorder(Modelo, -RMSE), y=RMSE)) +
 ```
 
 O melhor modelo será aquele que possuir o RMSE mais baixo. Utilizando essa métrica o melhor modelo gerado foi o utilizando Ridge com o cross validation seguido pelo modelo utilizando regressão linear e depois o Lasso. Vale salientar que a diferença entre os modelos é baixissíma.
+
+###Treino vs Validação
+
+```{r}
+# RIDGE
+ridge.validacao <- train(CRA ~ . ,data = p1.p2.test,
+                        method = "ridge",
+                        tuneGrid = lambda.grid,
+                        trControl = ctrl,
+                        metric = 'RMSE',
+                        preProcess=c('scale', 'center'))
+
+# LASSO
+lasso.validacao <- train(CRA ~ . ,data = p1.p2.test,
+                        method = "lasso",
+                        tuneLength = 10,
+                        metric = 'RMSE',
+                        preProcess=c('scale', 'center'))
+
+# LM
+lm.validacao <- train(CRA ~ ., p1.p2.test %>% select(-C1, -LP2), method= "lm", metric="RMSE") 
+
+ridge_prediction_v <- predict(ridge.validacao, p1.p2.test)
+ridge_prediction_v <- data.frame(pred = ridge_prediction_v, obs = p1.p2.test$CRA)
+
+lasso_prediction_v <- predict(lasso.validacao, p1.p2.test)
+lasso_prediction_v <- data.frame(pred = lasso_prediction_v, obs = p1.p2.test$CRA)
+
+lm_prediction_v <- predict(lm.validacao, p1.p2.test)
+lm_prediction_v <- data.frame(pred = lm_prediction_v, obs = p1.p2.test$CRA)
+
+
+linear_rmse_v <- round(defaultSummary(lm_prediction_v), digits = 3)[1]
+ridge_rmse_v <- round(defaultSummary(ridge_prediction_v), digits = 3)[1]
+lasso_rmse_v <- round(defaultSummary(lasso_prediction_v), digits = 3)[1]
+
+```
+
+
+```{r}
+
+toPlot3 <- data.frame(Rsquared = c(linear_rmse, linear_rmse_v, ridge_rmse, ridge_rmse_v, lasso_rmse, lasso_rmse_v),
+                        tipo = c("treino", "validacao", "treino", "validacao", "treino", "validacao"),
+                        modelo = c("LM","LM","RIDGE", "RIDGE","LASSO", "LASSO"))
+
+ggplot(data=toPlot3, aes(x = modelo, y = Rsquared, fill = tipo)) +
+ geom_bar(stat="identity", position=position_dodge()) +
+ theme_classic() +
+ labs(title = "Comparando os modelos") +
+ theme(axis.ticks = element_blank())
+```
 
 
 ##9 Melhorando o modelo
