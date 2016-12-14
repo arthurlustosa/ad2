@@ -1,5 +1,5 @@
 ---
-title: "Predição/nUtilizando Ridge e Lasso"
+title: "Predição - Utilizando Ridge e Lasso"
 autor: "Arthur Lustosa"
 output: 
   html_document:
@@ -27,7 +27,9 @@ library(caret)
 Recebemos os dataset já separados em treino e test.
 ```{r}
 graduados.train <- read.csv("dados/graduados_treino.csv")
-graduados.test <- read.csv("dados/graduados_teste.csv")
+graduados.test <- read.csv("dados/graduados_teste.csv") #validacao
+
+test <- read.csv("dados/test.csv")
 ```
 
 ##Conhecendo os dados
@@ -84,7 +86,7 @@ p1.p2.train <- graduados.model.input %>%
 colnames(p1.p2.train) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
 
 
-# DADOS TESTE
+# DADOS VALIDACAO
 
 #ordenando os dados pela matrícula
 graduados.test <- graduados.test %>%
@@ -116,6 +118,7 @@ p1.p2.test <- graduados.model.input %>%
 
 #renomeando colunas
 colnames(p1.p2.test) <- c("C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
+
 
 
 #substituindo NaN pelo CRA
@@ -169,7 +172,7 @@ O modelo inicial utiliza o Ridge. A Ridge Regression é um método de regulariza
 set.seed(825)
 
 ctrl <- trainControl(method = "repeatedcv", repeats = 5, number = 10)
-lambda.grid <- expand.grid(lambda = 10^seq(10, -2, length=100))
+lambda.grid <- expand.grid(lambda = seq(0, 2, by=0.05))
 
 ridge <- train(CRA ~ . ,data = p1.p2.train,
                         method = "ridge",
@@ -254,6 +257,8 @@ O melhor modelo será aquele que possuir o RMSE mais baixo. Como podemos ver, am
 ```{r}
 plot(varImp(ridge, scale = FALSE))
 plot(varImp(lasso, scale = FALSE))
+
+predict.enet(lasso$finalModel, type='coefficients', s=lasso$bestTune$fraction, mode='fraction')
 ```
 
 Acima temos o gráfico com a importância das variáveis para cada modelo, primeiro para o ridge depois para o lasso. Concluímos que as variáveis possuem a mesma importância para cada modelo.
@@ -287,6 +292,13 @@ round(defaultSummary(r.ridge_prediction), digits = 3)
 ```
 
 ##7 Treino com dados de teste
+```{r}
+lasso_prediction <- predict(lasso, test)
+
+lasso_prediction <- data.frame(pred = lasso_prediction, obs = p1.p2.train$CRA)
+round(defaultSummary(lasso_prediction), digits = 3)
+```
+
 
 ##8 Comparando Modelos com treino e teste
 
@@ -364,11 +376,11 @@ lasso_rmse_v <- round(defaultSummary(lasso_prediction_v), digits = 3)[1]
 
 ```{r}
 
-toPlot3 <- data.frame(Rsquared = c(linear_rmse, linear_rmse_v, ridge_rmse, ridge_rmse_v, lasso_rmse, lasso_rmse_v),
+toPlot3 <- data.frame(RMSE = c(linear_rmse, linear_rmse_v, ridge_rmse, ridge_rmse_v, lasso_rmse, lasso_rmse_v),
                         tipo = c("treino", "validacao", "treino", "validacao", "treino", "validacao"),
                         modelo = c("LM","LM","RIDGE", "RIDGE","LASSO", "LASSO"))
 
-ggplot(data=toPlot3, aes(x = modelo, y = Rsquared, fill = tipo)) +
+ggplot(data=toPlot3, aes(x = modelo, y = RMSE, fill = tipo)) +
  geom_bar(stat="identity", position=position_dodge()) +
  theme_classic() +
  labs(title = "Comparando os modelos") +
