@@ -28,10 +28,8 @@ library(leaps)
 Recebemos os dataset já separados em treino e test.
 ```{r}
 graduados.train <- read.csv("dados/graduados_treino.csv")
-graduados.test <- read.csv("dados/graduados_teste.csv") #validacao
-
-test <- read.csv("dados/test.csv")
-test.bruto <- read.csv("dados/teste_1_2_periodo.csv")
+graduados.validation <- read.csv("dados/graduados_teste.csv")
+graduados.test <- read.csv("dados/test.csv")
 
 ```
 
@@ -47,138 +45,67 @@ Um prepocessamento nos dados foi necessário antes de iniciarmos nossa análise.
 *creditos
 *media
 
-```{r, echo=F}
-colnames(graduados.train) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
-colnames(graduados.test) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
-colnames(test.bruto) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
-```
-
 
 ```{r warning=F, message=F, echo=F}
 
-# DADOS TREINO
-
-#ordenando os dados pela matrícula
-graduados.train <- graduados.train %>%
+#funcao que executa script para processamento dos dados
+processing_data <- function(data){
+  
+  colnames(data) <- c("matricula", "ano_evasao", "periodo_evasao", "cod_disciplina", "disciplina", "creditos", "media")
+  
+  
+  #ordenando os dados pela matrícula
+  data <- data %>%
   arrange(matricula)
-
-#filtrando dados e removendo os NaNs
-graduados.clean <- graduados.train %>%
+  
+  #filtrando dados e removendo os NaNs
+  data.clean <- data %>%
   filter(!is.na(media))
-
-#calculando CRA dos alunos e salvando numa coluna
-graduados.cra <- graduados.clean %>%
+  
+  #calculando CRA dos alunos e salvando numa coluna
+  data.cra <- data.clean %>%
   group_by(matricula) %>%
   mutate(cra.contrb = media*creditos) %>%
   summarise(cra = sum(cra.contrb)/sum(creditos))
-
-#utilizando a função dcast para deixar o dataset na forma ideal para a análise
-graduados.model.input <- graduados.clean %>%
+  
+  #utilizando a função dcast para deixar o dataset na forma ideal para a análise
+  data.model.input <- data.clean %>%
   group_by(matricula, disciplina) %>%
   filter(media == max(media))%>%
   ungroup() %>%
   select(matricula, disciplina, media) %>%
   mutate(disciplina = as.factor(gsub(" ", ".", disciplina))) %>%
   dcast(matricula ~disciplina, mean) %>%
-  merge(graduados.cra)
+  merge(data.cra)
+  
+  #selecionando cra e disciplinas do primeiro e segundo período
+  data.result <- data.model.input %>%
+    select(matricula, Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
+  
+  #renomeando colunas
+  colnames(data.result) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
+  
+  return(data.result)
+  
+}
 
-#selecionando cra e disciplinas do primeiro e segundo período
-p1.p2.train <- graduados.model.input %>%
-  select(matricula, Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
-
-#renomeando colunas
-colnames(p1.p2.train) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
-
-#removendo NaN
-p1.p2.train <- na.omit(p1.p2.train)
-
-
-# DADOS VALIDACAO
-
-#ordenando os dados pela matrícula
-graduados.test <- graduados.test %>%
-  arrange(matricula)
-
-#filtrando dados e removendo os NaNs
-graduados.clean <- graduados.test %>%
-  filter(!is.na(media))
-
-#calculando CRA dos alunos e salvando numa coluna
-graduados.cra <- graduados.clean %>%
-  group_by(matricula) %>%
-  mutate(cra.contrb = media*creditos) %>%
-  summarise(cra = sum(cra.contrb)/sum(creditos))
-
-#utilizando a função dcast para deixar o dataset na forma ideal para a análise
-graduados.model.input <- graduados.clean %>%
-  group_by(matricula, disciplina) %>%
-  filter(media == max(media))%>%
-  ungroup() %>%
-  select(matricula, disciplina, media) %>%
-  mutate(disciplina = as.factor(gsub(" ", ".", disciplina))) %>%
-  dcast(matricula ~disciplina, mean) %>%
-  merge(graduados.cra)
-
-#selecionando cra e disciplinas do primeiro e segundo período
-p1.p2.test <- graduados.model.input %>%
-  select(matricula, Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
-
-#renomeando colunas
-colnames(p1.p2.test) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
-
-#removendo NaNs
-p1.p2.test <- na.omit(p1.p2.test)
-
-# DADOS TESTE BRUTO
-
-#ordenando os dados pela matrícula
-test.bruto <- test.bruto %>%
-  arrange(matricula)
-
-#filtrando dados e removendo os NaNs
-graduados.clean.test <- test.bruto %>%
-  filter(!is.na(media))
-
-#calculando CRA dos alunos e salvando numa coluna
-graduados.cra.test <- graduados.clean.test %>%
-  group_by(matricula) %>%
-  mutate(cra.contrb = media*creditos) %>%
-  summarise(cra = sum(cra.contrb)/sum(creditos))
-
-#utilizando a função dcast para deixar o dataset na forma ideal para a análise
-graduados.model.input2 <- graduados.clean.test %>%
-  group_by(matricula, disciplina) %>%
-  filter(media == max(media))%>%
-  ungroup() %>%
-  select(matricula, disciplina, media) %>%
-  mutate(disciplina = as.factor(gsub(" ", ".", disciplina))) %>%
-  dcast(matricula ~disciplina, mean) %>%
-  merge(graduados.cra.test)
-
-#selecionando cra e disciplinas do primeiro e segundo período
-test.bruto <- graduados.model.input2 %>%
-  select(matricula, Laboratório.de.Programação.I, Programação.I, Introdução.à.Computação, Cálculo.Diferencial.e.Integral.I, Álgebra.Vetorial.e.Geometria.Analítica, Leitura.e.Produção.de.Textos, Cálculo.Diferencial.e.Integral.II, Matemática.Discreta, Programação.II, Teoria.dos.Grafos, Fundamentos.de.Física.Clássica, Laboratório.de.Programação.II, cra)
-
-#renomeando colunas
-colnames(p1.p2.test) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
-
-#renomeando colunas
-colnames(test.bruto) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2", "CRA")
-
-test.bruto <- na.omit(test.bruto)
+validation <- processing_data(graduados.validation)
+train <- processing_data(graduados.train)
 
 #substituindo NaN pelo CRA
-for (i in 1:nrow(p1.p2.train)){
-  for (j in 1:ncol(p1.p2.train)){
-    if(is.na(p1.p2.train[i,j])){
-      p1.p2.train[i,j] = p1.p2.train$CRA[i]
+for (i in 1:nrow(train)){
+  for (j in 1:ncol(train)){
+    if(is.na(train[i,j])){
+      train[i,j] = train$CRA[i]
 
     }
-    if(is.na(p1.p2.test[i,j])){
-      p1.p2.test[i, j] = p1.p2.test$CRA[i]
+    if(is.na(validation[i,j])){
+      validation[i, j] = validation$CRA[i]
     }
   }
 }
+
+validation <- na.omit(validation)
 
 ```
 
@@ -186,13 +113,13 @@ for (i in 1:nrow(p1.p2.train)){
 Após processarmos os dados tivemos que fazer mais algumas alterações para os dados ficassem no formato necessário para criar os modelos. Os atributos dos dados ficaram sendo as disciplinas e a última coluna como sendo a variável alvo. As linhas são as notas dos alunos, a matrícula foi removida devido a confidencialidade dos dados.
 
 ```{r}
-head(p1.p2.train)
+head(train)
 ```
 Antes de iniciarmos nossa análise vamos observar a correlação das variáveis em relação a variável alvo.
 
 ```{r fig.width=12, fig.height=10, warning=F, message=F}
 #calculando matriz de correlação
-correlationMatrix <- cor(p1.p2.train %>% select(-matricula))
+correlationMatrix <- cor(train %>% select(-matricula))
 
 #utlizamos a bibliota corrplot para montar o gráfico com as correlações
 corrplot(correlationMatrix, method="circle", type="lower", order="hclust", addCoef.col = "black")
@@ -201,14 +128,15 @@ Vemos que a disciplina de cálculo 2, LPT e matemática discreta são as discipl
 
 Vamos agora para nossa análise preditiva, para isso vamos seguir os passos descritos abaixo:
 
-*1.* Usando todas as variáveis disponíveis (disciplinas do primeiro e segundo período), use validação cruzada (nos dados de treino) para tunar um modelo de regressão Ridge.
-*2.* Mesmo que item acima mas usando um modelo de regressão Lasso.
-*3.* Compare os dois modelos nos dados de teste em termos de RMSE.
-*4.* Quais as variáveis mais importantes segundo o modelo de regressão Lasso? Alguma variável foi descartada? Quais?
-*5.* Re-treine o melhor modelo (dessa vez nos dados de treino sem validação cruzada) e reporte o RMSE no teste.
-*6.* Use o modelo treinado em 6 e aplique nos dados de teste que vamos disponibilizar.
-*7.* Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
-
+<ol>
+<li>1.</li> Usando todas as variáveis disponíveis (disciplinas do primeiro e segundo período), use validação cruzada (nos dados de treino) para tunar um modelo de regressão Ridge.
+<li>2.</li> Mesmo que item acima mas usando um modelo de regressão Lasso.
+<li>3.</li> Compare os dois modelos nos dados de teste em termos de RMSE.
+<li>4.</li> Quais as variáveis mais importantes segundo o modelo de regressão Lasso? Alguma variável foi descartada? Quais?
+<li>5.</li> Re-treine o melhor modelo (dessa vez nos dados de treino sem validação cruzada) e reporte o RMSE no teste.
+<li>6.</li> Use o modelo treinado em 6 e aplique nos dados de teste que vamos disponibilizar.
+<li>7.</li> Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
+</ol>
 
 ##2 Ridge
 O modelo inicial utiliza o Ridge. A Ridge Regression é um método de regularização do modelo que tem como principal objetivo suavizar atributos que sejam relacionados uns aos outros e que aumentam o ruído no modelo (A.K.A multicolinearidade). Para aplicarmos o Ridge utilizamos a biblioteca caret. 
@@ -218,9 +146,9 @@ O modelo inicial utiliza o Ridge. A Ridge Regression é um método de regulariza
 set.seed(825)
 
 ctrl <- trainControl(method = "cv", number = 10)
-lambda.grid <- expand.grid(lambda = 10^seq(10, -2, length=100))
+lambda.grid <- expand.grid(lambda = seq(0,10,0.05))
 
-ridge <- train(CRA ~ . ,data = p1.p2.train %>% select(-matricula),
+ridge <- train(CRA ~ . ,data = train %>% select(-matricula),
                         method = "ridge",
                         tuneGrid = lambda.grid,
                         trControl = ctrl,
@@ -239,17 +167,17 @@ ridge
 Depois de criado o modelo iremos agora gerar a previsão.
 
 ```{r}
-ridge_prediction <- predict(ridge, p1.p2.train)
+ridge_prediction <- predict(ridge, train)
 
-ridge_prediction <- data.frame(pred = ridge_prediction, obs = p1.p2.train$CRA)
+ridge_prediction <- data.frame(pred = ridge_prediction, obs = train$CRA)
 round(defaultSummary(ridge_prediction), digits = 3)
 ```
 
 
 ```{r}
-ridge_prediction <- predict(ridge, p1.p2.test)
-p1.p2.test <- na.omit(p1.p2.test)
-ridge_prediction <- data.frame(pred = ridge_prediction, obs = p1.p2.test$CRA)
+ridge_prediction <- predict(ridge, validation)
+
+ridge_prediction <- data.frame(pred = ridge_prediction, obs = validation$CRA)
 round(defaultSummary(ridge_prediction), digits = 3)
 ```
 
@@ -259,7 +187,7 @@ Iremos agora criar um modelo utilizando o Lasso. O Lasso é uma técnica que, al
 #Modelo Lasso
 set.seed(825)
 
-lasso <- train(CRA ~ . ,data = p1.p2.train %>% select(-matricula),
+lasso <- train(CRA ~ . ,data = train %>% select(-matricula),
                         method = "lasso",
                         tuneLength = 10,
                         metric = 'RMSE',
@@ -275,26 +203,26 @@ lasso
 Depois de criado o modelo iremos agora gerar a previsão.
 
 ```{r}
-lasso_prediction <- predict(lasso, p1.p2.train)
+lasso_prediction <- predict(lasso, train)
 
-lasso_prediction <- data.frame(pred = lasso_prediction, obs = p1.p2.train$CRA)
+lasso_prediction <- data.frame(pred = lasso_prediction, obs = train$CRA)
 round(defaultSummary(lasso_prediction), digits = 3)
 
 ```
 
-```{r fig.width=12, fig.height=10, warning=F, message=F}
+```{r fig.width=12, fig.height=10, warning=F, message=F, echo=F}
 #Modelo SVM
 set.seed(825)
 
-svm <- train(CRA ~ . ,data = p1.p2.train %>% select(-matricula),
+svm <- train(CRA ~ . ,data = train %>% select(-matricula),
                         method = "svmRadial",
                         tuneLength = 10,
                         metric = 'RMSE')
 plot(svm)
 
-svm_prediction <- predict(svm, p1.p2.train)
+svm_prediction <- predict(svm, train)
 
-svm_prediction <- data.frame(pred = svm_prediction, obs = p1.p2.train$CRA)
+svm_prediction <- data.frame(pred = svm_prediction, obs = train$CRA)
 round(defaultSummary(svm_prediction), digits = 3)
 ```
 
@@ -336,61 +264,63 @@ predict.enet(lasso$finalModel, type='coefficients', s=lasso$bestTune$fraction, m
 Acima temos o gráfico com a importância das variáveis para cada modelo, primeiro para o ridge depois para o lasso. Concluímos que as variáveis possuem a mesma importância para cada modelo.
 
 ```{r fig.width=12, fig.height=10, warning=F, message=F}
-ggplot(data = p1.p2.train, aes(x = CRA, y = C2)) +
+ggplot(data = train, aes(x = CRA, y = C2)) +
   geom_point()
 ```
 Vamos observar um pouco mais a fundo a relação entre C2 e o CRA, já que os nossos modelos apontaram essa variável como sendo a mais importante. Vamos que C2 e CRA tem um comportamento bem linear, temos alguns outliers, mas podemos concluir que quanto mais alta a nota em C2 consequentemente mais alto o CRA.
 
 
-##6 Re-treino Ridge
+##6 Re-treino Lasso
 ```{r fig.width=12, fig.height=10, warning=F, message=F}
-p1.p2.test <- na.omit(p1.p2.test)
-
-r.ridge <- train(CRA ~ . ,data = p1.p2.test,
-                        method = "ridge",
-                        tuneGrid = lambda.grid,
-                        trControl = ctrl,
+r.lasso <- train(CRA ~ . ,data = validation %>% select(-matricula),
+                        method = "lasso",
+                        tuneLength = 10,
                         metric = 'RMSE',
                         preProcess=c('scale', 'center'))
-r.ridge 
-plot(r.ridge)
+r.lasso 
+plot(r.lasso)
 ```
 
 ```{r}
 #predicao do re-treino
-r.ridge_prediction <- predict(r.ridge, p1.p2.test)
+r.lasso_prediction <- predict(r.lasso, validation)
 
-r.ridge_prediction <- data.frame(pred = r.ridge_prediction, obs = p1.p2.test$CRA)
-round(defaultSummary(r.ridge_prediction), digits = 3)
+r.lasso_prediction <- data.frame(pred = r.lasso_prediction, obs = validation$CRA)
+round(defaultSummary(r.lasso_prediction), digits = 3)
 ```
 
 ##7 Treino com dados de teste
 ```{r}
 #renomeando colunas teste
-colnames(test) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2")
+colnames(graduados.test) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2")
 
-lasso_prediction_t <- predict(lasso, test)
+lasso_prediction_validation <- predict(lasso, validation)
 
-submissao <- data.frame(matricula = test$matricula, 
-                     cra = lasso_prediction_t)
-write.csv(submissao, file = "sub1.csv", row.names = F)
+#validacao
+lasso_prediction_validation <- data.frame(pred = lasso_prediction_validation, obs = validation$CRA)
+round(defaultSummary(best.lasso_prediction_validation), digits = 3)
+
+
+#sumissao pro kaggle
+#submissao <- data.frame(matricula = graduados.test$matricula, 
+#                     cra = lasso_prediction_t)
+#write.csv(submissao, file = "sub5.csv", row.names = F)
 
 ```
-
 
 ##8 Comparando Modelos com treino e teste
 
 Para termos uma comparação mais robusta, propusemos um modelo de regressão linear. Primeiro rodamos com todas as variáveis, depois só com as mais significativas e tivemos o seguinte resultado.  
 ```{r}
-lm <- train(CRA ~ . ,p1.p2.train %>% select(-matricula), method= "lm", metric="RMSE") 
+lm <- train(CRA ~ . ,train %>% select(-matricula), method= "lm", metric="RMSE") 
 summary(lm)
 
-lmFit <- train(CRA ~ ., p1.p2.train %>% select(-matricula, -C1, -LP2), method= "lm", metric="RMSE") 
+lmFit <- train(CRA ~ ., train %>% select(-matricula, -C1, -LP2), method= "lm", metric="RMSE") 
 summary(lmFit)
 
-lmFit_prediction <- predict(lmFit, p1.p2.train)
+lmFit_prediction <- predict(lmFit, train)
 
-lmFit_prediction <- data.frame(pred = lmFit_prediction, obs = p1.p2.train$CRA)
+lmFit_prediction <- data.frame(pred = lmFit_prediction, obs = train$CRA)
 round(defaultSummary(lmFit_prediction), digits = 3)
 
 ```
@@ -417,14 +347,14 @@ O melhor modelo será aquele que possuir o RMSE mais baixo. Utilizando essa mét
 ###Treino vs Validação
 
 ```{r}
-ridge_prediction_v <- predict(ridge, p1.p2.test)
-ridge_prediction_v <- data.frame(pred = ridge_prediction_v, obs = p1.p2.test$CRA)
+ridge_prediction_v <- predict(ridge, validation)
+ridge_prediction_v <- data.frame(pred = ridge_prediction_v, obs = validation$CRA)
 
-lasso_prediction_v <- predict(lasso, p1.p2.test)
-lasso_prediction_v <- data.frame(pred = lasso_prediction_v, obs = p1.p2.test$CRA)
+lasso_prediction_v <- predict(lasso, validation)
+lasso_prediction_v <- data.frame(pred = lasso_prediction_v, obs = validation$CRA)
 
-lm_prediction_v <- predict(lm, p1.p2.test)
-lm_prediction_v <- data.frame(pred = lm_prediction_v, obs = p1.p2.test$CRA)
+lm_prediction_v <- predict(lm, validation)
+lm_prediction_v <- data.frame(pred = lm_prediction_v, obs = validation$CRA)
 
 
 linear_rmse_v <- round(defaultSummary(lm_prediction_v), digits = 3)[1]
@@ -440,7 +370,7 @@ toPlot3 <- data.frame(RMSE = c(linear_rmse, linear_rmse_v, ridge_rmse, ridge_rms
                         tipo = c("treino", "validacao", "treino", "validacao", "treino", "validacao"),
                         modelo = c("LM","LM","RIDGE", "RIDGE","LASSO", "LASSO"))
 
-ggplot(data=toPlot3, aes(x = modelo, y = RMSE, fill = tipo)) +
+ggplot(data=toPlot3, aes(x = modelo, y = RMSE, fill = tipo, label=RMSE)) +
  geom_bar(stat="identity", position=position_dodge()) +
  theme_classic() +
  labs(title = "Comparando os modelos") +
@@ -449,5 +379,88 @@ ggplot(data=toPlot3, aes(x = modelo, y = RMSE, fill = tipo)) +
 
 
 ##9 Melhorando o modelo
+Com o intuito de melhorar nosso modelo, ou seja, tentar diminuir o RMSE vamos adicionar novas colunas aos nossos dados com novos atributos. 
+```{r}
+#novas features
+add_new_features <- function(new_df){
+  new_df$mediaProg <- ((new_df$P1+new_df$LP1) + (new_df$P2+new_df$LP2))/2
 
-##10 Conclusões
+  new_df$mediaDSC <- (new_df$P1 + new_df$LP1 + new_df$IC + new_df$Grafos + new_df$Discreta)/5
+
+  new_df$mediaDME <- (new_df$C1+new_df$C2+new_df$Vetorial)/2
+
+  new_df$C2squared <- new_df$C2^2
+
+  new_df$logP2 <- log(new_df$P2)
+
+  new_df$logMediaProg <- log(new_df$mediaProg)
+  
+  return(new_df)
+}
+
+new_train <- add_new_features(train)
+new_validation <- add_new_features(validation)
+
+```
+Foram adicionadas 6 novas colunas: 
+
+<lo>
+<li>mediaProg</li> média das disciplinas de programação
+<li>mediaDSC</li> média das disciplinas ofertadas pelo departamento de computação
+<li>mediaDME</li> média das disciplinas ofertadas pelo departamento de matemática
+<li>C2squared</li> nota de cálculo 2 ao quadrado
+<li>logP2</li> log da nota de P2
+<li>logMediaProg/li> log da média das disciplinas de programação
+</lo>
+
+Utilizamos a mediaProg para termos a média das disciplinas exclusivas de programação, o mesmo foi pensado para as disciplinas do DSC e do DME, a nota de C2 se mostrou muito importante, por isso elevamos esse valo ao quadrado. Aplicamos o log nas notas de P2 e mediaProg devido a elas terem apresentado uma alta importância. 
+Após esse incremento nos dados, rodamos o modelo mais uma vez e obtivamos uma significativa melhora.
+
+```{r}
+set.seed(825)
+best.lasso <- train(CRA ~ . ,data = new_train %>% select(-matricula),
+                        method = "lasso",
+                        tuneLength = 10,
+                        metric = 'RMSE',
+                        preProcess=c('scale', 'center'))
+
+plot(varImp(best.lasso, scale = FALSE))
+predict.enet(best.lasso$finalModel, type='coefficients', s=lasso$bestTune$fraction, mode='fraction')
+
+best.lasso_prediction_train <- predict(best.lasso, new_train)
+best.lasso_prediction_validation <- predict(best.lasso, new_validation)
+
+
+#treino
+best.lasso_prediction_train <- data.frame(pred = best.lasso_prediction_train, obs = new_train$CRA)
+round(defaultSummary(best.lasso_prediction_train), digits = 3)
+
+#validacao
+best.lasso_prediction_validation <- data.frame(pred = best.lasso_prediction_validation, obs = new_validation$CRA)
+round(defaultSummary(best.lasso_prediction_validation), digits = 3)
+
+```
+
+```{r fig.width=12, fig.height=10, warning=F, message=F, echo=F}
+#Modelo SVM
+set.seed(825)
+
+svm <- train(CRA ~ . ,data = new_train %>% select(-matricula),
+                        method = "svmRadial",
+                        tuneLength = 10,
+                        metric = 'RMSE')
+plot(svm)
+
+svm_prediction <- predict(svm, new_train)
+
+svm_prediction <- data.frame(pred = svm_prediction, obs = new_train$CRA)
+round(defaultSummary(svm_prediction), digits = 3)
+
+testt <- add_new_features(graduados.test)
+svm_prediction2 <- predict(svm, testt)
+
+submissao <- data.frame(matricula = testt$matricula, 
+                     cra = svm_prediction2)
+write.csv(submissao, file = "sub5.csv", row.names = F)
+```
+
