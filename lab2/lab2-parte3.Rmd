@@ -8,13 +8,10 @@ output:
     
 ---
 
-#Predição
-##Utilizando Ridge e Lasso
-
 Nessa análise construíremos modelos preditivos de regressão para predição do CRA (Coeficiente de Rendimento Acadêmico) baseado nas notas obtidas nas disciplinas do primeiro e do segundo período dos alunos de Ciência da Computação - UFCG.
 
 Bibliotecas utilizadas
-```{r setup, include=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(dplyr)
 library(reshape2)
 library(ggplot2)
@@ -35,16 +32,17 @@ graduados.test <- read.csv("dados/test.csv")
 
 ##Conhecendo os dados
 
-Um prepocessamento nos dados foi necessário antes de iniciarmos nossa análise. Foi preciso calcular o CRA dos alunos e selecionar apenas as disciplinas referentes ao primeiro e segundo perído do curso. Após o processamento nossos dados ficaram no seguinte formato:
+Um preprocessamento nos dados foi necessário, antes de iniciarmos nossa análise. Foi preciso calcular o CRA dos alunos e selecionar apenas as disciplinas referentes ao primeiro e segundo perído do curso. Após o processamento nossos dados ficaram no seguinte formato:
 
-*matricula
-*ano_evasao
-*periodo_evasao
-*cod_disciplina
-*disciplina
-*creditos
-*media
-
+<ol>
+<li>-</li>matricula
+<li>-</li>ano_evasao
+<li>-</li>periodo_evasao
+<li>-</li>cod_disciplina
+<li>-</li>disciplina
+<li>-</li>creditos
+<li>-</li>media
+</ol>
 
 ```{r warning=F, message=F, echo=F}
 
@@ -92,6 +90,7 @@ processing_data <- function(data){
 validation <- processing_data(graduados.validation)
 train <- processing_data(graduados.train)
 
+
 #substituindo NaN pelo CRA
 for (i in 1:nrow(train)){
   for (j in 1:ncol(train)){
@@ -129,13 +128,13 @@ Vemos que a disciplina de cálculo 2, LPT e matemática discreta são as discipl
 Vamos agora para nossa análise preditiva, para isso vamos seguir os passos descritos abaixo:
 
 <ol>
-<li>1.</li> Usando todas as variáveis disponíveis (disciplinas do primeiro e segundo período), use validação cruzada (nos dados de treino) para tunar um modelo de regressão Ridge.
-<li>2.</li> Mesmo que item acima mas usando um modelo de regressão Lasso.
-<li>3.</li> Compare os dois modelos nos dados de teste em termos de RMSE.
-<li>4.</li> Quais as variáveis mais importantes segundo o modelo de regressão Lasso? Alguma variável foi descartada? Quais?
-<li>5.</li> Re-treine o melhor modelo (dessa vez nos dados de treino sem validação cruzada) e reporte o RMSE no teste.
-<li>6.</li> Use o modelo treinado em 6 e aplique nos dados de teste que vamos disponibilizar.
-<li>7.</li> Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
+<li></li> Usando todas as variáveis disponíveis (disciplinas do primeiro e segundo período), use validação cruzada (nos dados de treino) para tunar um modelo de regressão Ridge.
+<li></li> Mesmo que item acima mas usando um modelo de regressão Lasso.
+<li></li> Compare os dois modelos nos dados de teste em termos de RMSE.
+<li></li> Quais as variáveis mais importantes segundo o modelo de regressão Lasso? Alguma variável foi descartada? Quais?
+<li></li> Re-treine o melhor modelo (dessa vez nos dados de treino sem validação cruzada) e reporte o RMSE no teste.
+<li></li> Use o modelo treinado em 6 e aplique nos dados de teste que vamos disponibilizar.
+<li></li> Crie novos atributos a partir dos existentes para tentar melhorar o seu modelo.
 </ol>
 
 ##2 Ridge
@@ -146,7 +145,7 @@ O modelo inicial utiliza o Ridge. A Ridge Regression é um método de regulariza
 set.seed(825)
 
 ctrl <- trainControl(method = "cv", number = 10)
-lambda.grid <- expand.grid(lambda = seq(0,10,0.05))
+lambda.grid <- expand.grid(lambda = 10^seq(10, -2, length=100))
 
 ridge <- train(CRA ~ . ,data = train %>% select(-matricula),
                         method = "ridge",
@@ -212,18 +211,18 @@ round(defaultSummary(lasso_prediction), digits = 3)
 
 ```{r fig.width=12, fig.height=10, warning=F, message=F, echo=F}
 #Modelo SVM
-set.seed(825)
-
-svm <- train(CRA ~ . ,data = train %>% select(-matricula),
-                        method = "svmRadial",
-                        tuneLength = 10,
-                        metric = 'RMSE')
-plot(svm)
-
-svm_prediction <- predict(svm, train)
-
-svm_prediction <- data.frame(pred = svm_prediction, obs = train$CRA)
-round(defaultSummary(svm_prediction), digits = 3)
+# set.seed(825)
+# 
+# svm <- train(CRA ~ . ,data = train %>% select(-matricula),
+#                         method = "svmRadial",
+#                         tuneLength = 10,
+#                         metric = 'RMSE')
+# plot(svm)
+# 
+# svm_prediction <- predict(svm, train)
+# 
+# svm_prediction <- data.frame(pred = svm_prediction, obs = train$CRA)
+# round(defaultSummary(svm_prediction), digits = 3)
 ```
 
 
@@ -249,8 +248,8 @@ ggplot(compare, aes(x = pred, y = obs)) +
 round(defaultSummary(ridge_prediction), digits = 3)
 round(defaultSummary(lasso_prediction), digits = 3)
 ```
-O melhor modelo será aquele que possuir o RMSE mais baixo. Como podemos ver, ambos os modelos produziram um RMSE próximo, ou seja, não temos uma diferença tão significativa entre os modelos. Entre o Lasso e o Ridge ficamos com o Ridge que ficou com RMSE ~0.459
-
+O melhor modelo será aquele que possuir o RMSE mais baixo. Como podemos ver, ambos os modelos produziram um RMSE próximo, ou seja, não temos uma diferença tão significativa entre os modelos. Entre o Lasso e o Ridge ficamos com o Ridge que ficou com RMSE ~0.459.
+Os modelos tiveram um comportamento bastante semelhantes, por isso optamos em não escolher um único modelo como o melhor, visto que a diferença entres os RMSE é baixa.
 
 ##5 Importância das Variáveis
 
@@ -261,44 +260,42 @@ plot(varImp(lasso, scale = FALSE))
 predict.enet(lasso$finalModel, type='coefficients', s=lasso$bestTune$fraction, mode='fraction')
 ```
 
-Acima temos o gráfico com a importância das variáveis para cada modelo, primeiro para o ridge depois para o lasso. Concluímos que as variáveis possuem a mesma importância para cada modelo.
+Acima temos o gráfico com a importância das variáveis para cada modelo, primeiro para o ridge depois para o lasso. Concluímos que as variáveis possuem a mesma importância para cada modelo. No lasso foi removida algumas variáveis, como mostrado acima, as variáveis C1 e LP2 foram removidas.
 
+A variável C2 se mostrou muito improtante para ambos os modelos, vamos observar mais a fundo esse relacionamento no plot abaixo.
 ```{r fig.width=12, fig.height=10, warning=F, message=F}
 ggplot(data = train, aes(x = CRA, y = C2)) +
   geom_point()
 ```
-Vamos observar um pouco mais a fundo a relação entre C2 e o CRA, já que os nossos modelos apontaram essa variável como sendo a mais importante. Vamos que C2 e CRA tem um comportamento bem linear, temos alguns outliers, mas podemos concluir que quanto mais alta a nota em C2 consequentemente mais alto o CRA.
+Vemos que C2 e CRA tem um comportamento bem linear, temos alguns outliers, mas podemos concluir que quanto mais alta a nota em C2 consequentemente mais alto o CRA.
 
 
 ##6 Re-treino Lasso
 ```{r fig.width=12, fig.height=10, warning=F, message=F}
-r.lasso <- train(CRA ~ . ,data = validation %>% select(-matricula),
-                        method = "lasso",
-                        tuneLength = 10,
+r.ridge <- train(CRA ~ . ,data = train %>% select(-matricula),
+                        method = "ridge",
                         metric = 'RMSE',
                         preProcess=c('scale', 'center'))
-r.lasso 
-plot(r.lasso)
+r.ridge 
+plot(r.ridge)
 ```
 
 ```{r}
 #predicao do re-treino
-r.lasso_prediction <- predict(r.lasso, validation)
+r_ridge_prediction <- predict(r.ridge, train)
 
-r.lasso_prediction <- data.frame(pred = r.lasso_prediction, obs = validation$CRA)
-round(defaultSummary(r.lasso_prediction), digits = 3)
+r_ridge_prediction <- data.frame(pred = r_ridge_prediction, obs = train$CRA)
+round(defaultSummary(r_ridge_prediction), digits = 3)
 ```
 
 ##7 Treino com dados de teste
 ```{r}
-#renomeando colunas teste
-colnames(graduados.test) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2")
 
-lasso_prediction_validation <- predict(lasso, validation)
+ridge_prediction_validation <- predict(ridge, validation)
 
 #validacao
-lasso_prediction_validation <- data.frame(pred = lasso_prediction_validation, obs = validation$CRA)
-round(defaultSummary(best.lasso_prediction_validation), digits = 3)
+ridge_prediction_validation <- data.frame(pred = ridge_prediction_validation, obs = validation$CRA)
+round(defaultSummary(ridge_prediction_validation), digits = 3)
 
 
 #sumissao pro kaggle
@@ -307,6 +304,7 @@ round(defaultSummary(best.lasso_prediction_validation), digits = 3)
 #write.csv(submissao, file = "sub5.csv", row.names = F)
 
 ```
+Mesmo após o retreino do modelo com os dados de validação, o RMSE se mantém quase o mesmo, a variação é muito insignificante.
 
 ##8 Comparando Modelos com treino e teste
 
@@ -340,6 +338,7 @@ ggplot(toPlot, aes(x=reorder(Modelo, -RMSE), y=RMSE)) +
    theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.background=element_blank()) +
   coord_flip() + 
   geom_text(aes(label = RMSE))
+
 ```
 
 O melhor modelo será aquele que possuir o RMSE mais baixo. Utilizando essa métrica o melhor modelo gerado foi o utilizando Ridge com o cross validation seguido pelo modelo utilizando regressão linear e depois o Lasso. Vale salientar que a diferença entre os modelos é baixissíma.
@@ -376,7 +375,7 @@ ggplot(data=toPlot3, aes(x = modelo, y = RMSE, fill = tipo, label=RMSE)) +
  labs(title = "Comparando os modelos") +
  theme(axis.ticks = element_blank())
 ```
-
+No gráfico acima temos uma comparação entre os modelos propostos, analisando o RMSE com os dados de treino e validação.
 
 ##9 Melhorando o modelo
 Com o intuito de melhorar nosso modelo, ou seja, tentar diminuir o RMSE vamos adicionar novas colunas aos nossos dados com novos atributos. 
@@ -413,8 +412,8 @@ Foram adicionadas 6 novas colunas:
 <li>logMediaProg/li> log da média das disciplinas de programação
 </lo>
 
-Utilizamos a mediaProg para termos a média das disciplinas exclusivas de programação, o mesmo foi pensado para as disciplinas do DSC e do DME, a nota de C2 se mostrou muito importante, por isso elevamos esse valo ao quadrado. Aplicamos o log nas notas de P2 e mediaProg devido a elas terem apresentado uma alta importância. 
-Após esse incremento nos dados, rodamos o modelo mais uma vez e obtivamos uma significativa melhora.
+Utilizamos a mediaProg para termos a média das disciplinas exclusivas de programação, o mesmo foi pensado para as disciplinas do DSC e do DME, a nota de C2 se mostrou muito importante, por isso elevamos esse valor ao quadrado. Aplicamos o log nas notas de P2 e mediaProg devido a elas terem apresentado uma alta importância. 
+Após esse incremento nos dados vamos rodar o modelo e ver como ele se comporta.
 
 ```{r}
 set.seed(825)
@@ -441,26 +440,32 @@ round(defaultSummary(best.lasso_prediction_validation), digits = 3)
 
 ```
 
+Porém, mesmo após adicionar novas features e elas se apresentarem importantes o nosso modelo permaneceu estável, com o mesmo RMSE. 
+
 ```{r fig.width=12, fig.height=10, warning=F, message=F, echo=F}
 #Modelo SVM
-set.seed(825)
-
-svm <- train(CRA ~ . ,data = new_train %>% select(-matricula),
-                        method = "svmRadial",
-                        tuneLength = 10,
-                        metric = 'RMSE')
-plot(svm)
-
-svm_prediction <- predict(svm, new_train)
-
-svm_prediction <- data.frame(pred = svm_prediction, obs = new_train$CRA)
-round(defaultSummary(svm_prediction), digits = 3)
-
-testt <- add_new_features(graduados.test)
-svm_prediction2 <- predict(svm, testt)
-
-submissao <- data.frame(matricula = testt$matricula, 
-                     cra = svm_prediction2)
-write.csv(submissao, file = "sub5.csv", row.names = F)
+# set.seed(825)
+# 
+# svm <- train(CRA ~ . ,data = new_train %>% select(-matricula),
+#                         method = "svmRadial",
+#                         tuneLength = 10,
+#                         metric = 'RMSE')
+# plot(svm)
+# 
+# svm_prediction <- predict(svm, new_train)
+# 
+# svm_prediction <- data.frame(pred = svm_prediction, obs = new_train$CRA)
+# round(defaultSummary(svm_prediction), digits = 3)
+# 
+# 
+# 
+# colnames(graduados.test) <- c("matricula", "C1", "Vetorial", "LPT", "P1", "IC", "LP1","C2", "Discreta", "P2", "Grafos", "Física", "LP2")
+# 
+# testt <- add_new_features(graduados.test)
+# svm_prediction2 <- predict(svm, testt)
+# 
+# submissao <- data.frame(matricula = testt$matricula, 
+#                      cra = svm_prediction2)
+# write.csv(submissao, file = "sub5.csv", row.names = F)
 ```
 
