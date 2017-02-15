@@ -1,0 +1,56 @@
+---
+title: "Entendendo os dados"
+author: "Arthur Lustosa"
+output: 
+  html_document:
+    toc : true
+    toc_float: true
+---
+
+Nosso objetivo nessa análise é entender os dados, fazer uma análise descritiva para nos ajudar a responder algumas perguntas sobre classificação.
+
+Para nosso auxilio, utilizaremos as bibliotecas a seguir
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+
+Primeiro vamos ler os dados que iremos trabalhar
+```{r}
+treino_classificação <- read.csv("dados/treino_classificacao.csv")
+```
+
+Os dados são referentes ao histórico dos alunos do primeiro período de 2000 a 2015, e possuem os seguintes atributos:
+
+<ol>
+<li>MAT_ALU_MATRICULA: Matrrícula aluno (anonimizado)</li>
+<li>MAT_TUR_DIS_DISCIPLINA: Código Disciplina</li>
+<li>disciplina: Nome Disciplina</li>
+<li>MAT_TUR_ANO: Ano da matrícula</li>
+<li>MAT_MEDIA_FINAL: Média obtida na disciplina</li>
+<li>EVADIU: Variável-alvo que indica se o aluno evadiu ou não ao término do período.</li>
+</ol>
+
+```{r}
+summary(treino_classificação)
+str(treino_classificação)
+```
+
+#1. Qual foi o ano em que houve mais evasões?
+
+```{r}
+n_evasoes <- treino_classificação %>%
+  select(MAT_ALU_MATRICULA, MAT_TUR_ANO, EVADIU) %>%
+  distinct() %>%
+  group_by(MAT_TUR_ANO) %>%
+  summarise(n_evasoes = sum(EVADIU))
+
+barplot(n_evasoes$n_evasoes,
+        names.arg = n_evasoes$MAT_TUR_ANO,
+        xlab = "Ano",
+        ylab = "Número de Evasões")
+
+  
+```
+
