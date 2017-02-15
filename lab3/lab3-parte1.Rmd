@@ -2,9 +2,9 @@
 title: "Entendendo os dados"
 author: "Arthur Lustosa"
 output: 
-  html_document:
-    toc : true
-    toc_float: true
+html_document:
+toc : true
+toc_float: true
 ---
 
 Nosso objetivo nessa análise é entender os dados, fazer uma análise descritiva para nos ajudar a responder algumas perguntas sobre classificação.
@@ -13,23 +13,26 @@ Para nosso auxilio, utilizaremos as bibliotecas a seguir
 ```{r}
 library(dplyr)
 library(ggplot2)
+library(highcharter)
+library(plotly)
 ```
 
 
 Primeiro vamos ler os dados que iremos trabalhar
 ```{r}
 treino_classificação <- read.csv("dados/treino_classificacao.csv")
+colnames(treino_classificação) <- c("Matricula", "Matricula_Turma", "Disciplina", "Ano", "Periodo","Media_Final", "Evadiu")
 ```
 
 Os dados são referentes ao histórico dos alunos do primeiro período de 2000 a 2015, e possuem os seguintes atributos:
 
 <ol>
-<li>MAT_ALU_MATRICULA: Matrrícula aluno (anonimizado)</li>
-<li>MAT_TUR_DIS_DISCIPLINA: Código Disciplina</li>
-<li>disciplina: Nome Disciplina</li>
-<li>MAT_TUR_ANO: Ano da matrícula</li>
-<li>MAT_MEDIA_FINAL: Média obtida na disciplina</li>
-<li>EVADIU: Variável-alvo que indica se o aluno evadiu ou não ao término do período.</li>
+<li>Matricula: Matrícula aluno (anonimizado)</li>
+<li>Matricula_Turma: Código Disciplina</li>
+<li>Disciplina: Nome Disciplina</li>
+<li>Ano: Ano da matrícula</li>
+<li>Media_Final: Média obtida na disciplina</li>
+<li>Evadiu: Variável-alvo que indica se o aluno evadiu ou não ao término do período.</li>
 </ol>
 
 ```{r}
@@ -41,16 +44,50 @@ str(treino_classificação)
 
 ```{r}
 n_evasoes <- treino_classificação %>%
-  select(MAT_ALU_MATRICULA, MAT_TUR_ANO, EVADIU) %>%
+  select(Matricula, Ano, Evadiu) %>%
   distinct() %>%
-  group_by(MAT_TUR_ANO) %>%
-  summarise(n_evasoes = sum(EVADIU))
+  group_by(Ano) %>%
+  summarise(n_evasoes = sum(Evadiu))
 
-barplot(n_evasoes$n_evasoes,
-        names.arg = n_evasoes$MAT_TUR_ANO,
-        xlab = "Ano",
-        ylab = "Número de Evasões")
+p <- plot_ly(n_evasoes, x=Ano, y=n_evasoes,
+             type = "bar", marker = list(color = c('rgba(204,204,204,1)', 'rgba(204,204,204,1)', 'rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(204,204,204,1)','rgba(222,45,38,0.8)', 'rgba(204,204,204,1)', 'rgba(204,204,204,1)','rgba(204,204,204,1)', 'rgba(204,204,204,1)'))) %>%
+  layout(title = "Evasões por Ano (2000 - 2015)",
+         xaxis = list(
+           title = "Ano"
+         ), yaxis = list(
+           title = "Número de Evasões"
+         )) 
+p
 
-  
+```
+
+
+#2. Distribuição das Classes
+```{r}
+distribuicao_classes <- treino_classificação %>%
+  select(Matricula, Ano, Evadiu) %>%
+  distinct() %>%
+  group_by(Ano, Evadiu) %>%
+  summarise(count = n())
+
+
+ggplot(data=distribuicao_classes, aes(x=Ano, y=count, fill=Evadiu)) +
+geom_bar(stat="identity") 
+
+```
+
+
+#3. Desbalanceamento das Classes 
+```{r}
+contagem.total = group_by(matr_unicas, Evadiu) %>% summarise(count = n())
+```
+
+Dessa maneira, podemos concluir que existe um grande desbalanceamento entre as classes, pois a grande maioria dos alunos não evadem o curso. O desbalanceamento pode causar a diminuição de acuracia do algoritmo de predição, fazendo com que a performance do algoritmo seja sempre tendenciosa para a classe majoritária, nesse caso a não evasão do aluno. Isso ocorre porque os algoritmos assumem que os dados possuem distruibuição balanceada e assim consideram que os erros obtidos pelas classes possuem o mesmo custo, o que não se aplica quando há desbalanceamento.
+
+
+#4. Novo atributo
+```{r}
+novo_atributo = group_by(treino_classificação, Matricula) %>% mutate(count = n(), n_reprovacoes = sum(Media_Final < 5))
+
 ```
 
