@@ -1,0 +1,25 @@
+---
+title: "Laboratório 3 - Parte 2: Prevendo Evasão"
+author: "Arthur Lustosa"
+date: "20 de fevereiro de 2017"
+output: 
+  html_document:
+    toc : true
+    toc_float: true
+    
+---
+
+O objetivo dessa análise é prever a evasão dos alunos do curso de Ciência da Computação da UFCG por meio de algoritmos de predição. Utilizaremos a seguinte estratégia para verificar a evasão, se o aluno cursou o primeiro período inteiro vamos tentar prever se ele se matriculará ou não no segunto período. Caso ele não se matriculou é porque abandonou o curso ou solicitou desligamento. 
+
+Para iniciar nossa análise vamos importar as bibliotecas necessárias
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+
+Lendo os dados
+```{r, message=FALSE, warning=FALSE}
+treino_classificação <- read.csv("dados/treino_classificacao.csv")
+```
+
