@@ -16,10 +16,64 @@ Para iniciar nossa análise vamos importar as bibliotecas necessárias
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(reshape2)
 ```
 
 Lendo os dados
 ```{r, message=FALSE, warning=FALSE}
-treino_classificação <- read.csv("dados/treino_classificacao.csv")
+dados <- read.csv("dados/treino_classificacao_v2.csv")
+colnames(dados) <- c("Matricula", "Matricula_Turma", "Disciplina", "Ano", "Periodo","Media_Final", "evadiu")
+
+#adicionando novo atributo
+dados = group_by(dados, Matricula) %>% mutate(count = n(), n_reprovacoes = sum(Media_Final < 5))
+
+# Criando o atributo
+reprovacoes <- function(medias) {
+  temp <- medias[medias < 5]
+  return(length(temp))
+}
+
+#substituindo NAs
+dados <- dados %>%
+  filter(!is.na(Media_Final))
+  
+
+dados <- dados %>%
+  group_by(Matricula) %>%
+  mutate(num_reprovacoes = reprovacoes(medias = Media_Final))
+
+dados <- dados %>%
+  group_by(Matricula, Disciplina) %>%
+  filter(Media_Final == max(Media_Final))%>%
+  ungroup() %>%
+  select(Matricula, Disciplina, Media_Final, evadiu, Ano, num_reprovacoes) %>%
+  mutate(Disciplina = as.factor(gsub(" ", ".", Disciplina))) %>%
+  dcast(Matricula + evadiu + Ano + num_reprovacoes ~Disciplina, value.var = "Media_Final") 
+
+ colnames(dados) <- c("matricula", "evadiu", "ano", "num_reprovacoes","Vetorial", "C1", "IC", "LP1", "LPT", "P1")
+
+```
+
+<!-- TODO --> 
+<!-- 1. Separe os dados em treino e teste; -->
+<!-- 2. Use como atributos as médias das disciplinas mais o atributo que você criou na parte 1 (fique a vontade para criar mais atributos); -->
+<!-- 3. Treine modelos de regressão logística; -->
+<!-- 4. Treine modelos de árvore de decisão; -->
+<!-- 5. Interprete os coeficientes da regressão. Quais atributos parecem ser mais importantes?; -->
+<!-- 6. Reporte acurácia, precision e recall no treino e teste. Como você avalia os resultados? Justifique sua resposta. -->
+<!-- Note que para os passos acima não é necessário usar validação cruzada. -->
+
+<!-- 7.  Controle overfitting usando validação-cruzada (ridge e lasso na regressão logística e condições de "early stopping" nas árvores de decisão, por exemplo, profundidade da árvore); -->
+<!-- 8. Reporte acurácia, precision e recall da validação-cruzada e teste (para os melhores modelos); -->
+<!-- 9. Aplique o melhor modelo a você mesmo(a) usando seu histórico e reporte a predição e resultado. -->
+
+Separando dados em treino e teste
+```{r}
+treino <- dados %>%
+  filter(ano >= 2009 & ano <= 2014)
+
+teste <- dados %>% 
+  filter(ano == 2015)
+
 ```
 
