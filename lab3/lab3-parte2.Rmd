@@ -9,7 +9,7 @@ output:
     
 ---
 
-O objetivo dessa análise é prever a evasão dos alunos do curso de Ciência da Computação da UFCG por meio de algoritmos de predição. Utilizaremos a seguinte estratégia para verificar a evasão, se o aluno cursou o primeiro período inteiro vamos tentar prever se ele se matriculará ou não no segunto período. Caso ele não se matriculou é porque abandonou o curso ou solicitou desligamento. 
+Este problema dá continuação a uma análise iniciada [aqui](https://github.com/arthurlustosa/ad2/blob/master/lab3/lab3-parte1.Rmd). Nosso objetivo agora é prever a evasão dos alunos do curso de Ciência da Computação da UFCG por meio de algoritmos de predição. Utilizaremos a seguinte estratégia para verificar a evasão, se o aluno cursou o primeiro período inteiro vamos tentar prever se ele se matriculará ou não no segundo período. Caso ele não se matriculou é porque abandonou o curso ou solicitou desligamento. 
 
 Para iniciar nossa análise vamos importar as bibliotecas necessárias
 ```{r, message=FALSE, warning=FALSE}
@@ -18,6 +18,7 @@ library(ggplot2)
 library(plotly)
 library(reshape2)
 library(caret)
+library(glmnet)
 ```
 
 Lendo os dados
@@ -53,9 +54,11 @@ dados <- dados %>%
 
 ```
 
-Imputação dos dados, ao analisar os dados observamos um número significativos de NAs nas notas das disciplinas, por isso optamos em realizar a inputação dos dados manualmente. Separamos as disciplinas por departamentos e por exemplo, se a média de vetorial estiver faltando, colocaremos a média de cálculo 1 o mesmo caso contrário. O mesmo fizemos para P1 e LP1, nos casos de IC e LPT usamos a média das demais disciplinas.
+O atributo criado foi a contagem do número de reprovações que o aluno teve. Para isso, analisando as notas finais nas disciplinas, caso fosse < 5 o aluno foi reprovado, fizemos a contagem dessas ocorrências e armazenamos numa coluna.
 
-```{r}
+A imputação dos dados, ao analisar os dados observamos um número significativos de NAs nas notas das disciplinas, por isso optamos em realizar a inputação dos dados manualmente. Separamos as disciplinas por departamentos e por exemplo, se a média de vetorial estiver faltando, colocaremos a média de cálculo 1 o mesmo caso contrário. O mesmo fizemos para P1 e LP1, nos casos de IC e LPT usamos a média das demais disciplinas.
+
+```{r, message=FALSE}
 #imputando os dados
 dados <- dados %>%
   mutate(Vetorial = ifelse(is.na(Vetorial),
@@ -89,20 +92,8 @@ dados <- dados %>%
 ```
 
 
-<!-- TODO --> 
-<!-- 1. Separe os dados em treino e teste; -->
-<!-- 2. Use como atributos as médias das disciplinas mais o atributo que você criou na parte 1 (fique a vontade para criar mais atributos); -->
-<!-- 3. Treine modelos de regressão logística; -->
-<!-- 4. Treine modelos de árvore de decisão; -->
-<!-- 5. Interprete os coeficientes da regressão. Quais atributos parecem ser mais importantes?; -->
-<!-- 6. Reporte acurácia, precision e recall no treino e teste. Como você avalia os resultados? Justifique sua resposta. -->
-<!-- Note que para os passos acima não é necessário usar validação cruzada. -->
 
-<!-- 7.  Controle overfitting usando validação-cruzada (ridge e lasso na regressão logística e condições de "early stopping" nas árvores de decisão, por exemplo, profundidade da árvore); -->
-<!-- 8. Reporte acurácia, precision e recall da validação-cruzada e teste (para os melhores modelos); -->
-<!-- 9. Aplique o melhor modelo a você mesmo(a) usando seu histórico e reporte a predição e resultado. -->
-
-###Separando dados em treino e teste
+###1.Separando dados em treino e teste
 Optamos por dividir os dados em treino e teste, observamos que a partir de 2011 temos um aumento considerável no número de matrículas, isso devido aos incentivos do governo em facilitar a entrada dos alunos na universidade, por isso os dados de treino são equivalentes aos anos de 2011 e 2014 e os de teste ao ano de 2015. 
 
 ```{r}
@@ -117,7 +108,7 @@ test.data$evadiu = as.factor(test.data$evadiu)
 
 ```
 
-###Treino - Modelos de regressão logística
+###2.Treino - Modelos de regressão logística
 ```{r}
 model.gml = train(evadiu ~. -matricula,
                    data=train.data,
@@ -127,30 +118,29 @@ model.gml = train(evadiu ~. -matricula,
 
 ```
 
-###Treino - Modelos de árvore de decisão
+###3.Treino - Modelos de árvore de decisão
 ```{r}
 library("rpart")
 decision.tree.fit <- rpart(evadiu ~ . -matricula, data=train.data)
 ```
 
-###Interpretação de coeficientes da regressão
+###4.Interpretação de coeficientes da regressão
 ```{r}
 summary(model.gml)
 ```
 Ao analisar os coeficientes do nosso modelo, as variáveis mais significativas são LPT e o nosso atributo criado num_reprovações. Porém essas variáveis apresentam os menores p-valores, o que não faz muito sentido, acreditamos que essa importância que o modelo mostrou seja resultado da imputação dos dados.
 
 
-###Acurácia, precision e recall no treino e teste
+###5.Acurácia, precision e recall no treino e teste
 
-TP: true-positive;
-TN: true-negative;
-FP: false-positive;
-FN: false-negative.
+* **TP**: true-positive;
+* **TN**: true-negative;
+* **FP**: false-positive;
+* **FN**: false-negative.
 
-Acurácia: proporção de observações corretamente classificadas. (TP+TN)/(TP+TN+FP+FN);
-
-Precisão: quantas das observaçoes preditas como positivas são realmente positivas. TP/(TP+FP);
-Recall: quantas observaçoes positivas foram corretamente classificadas. TP/(TP+FN).
+* **Acurácia**: proporção de observações corretamente classificadas. (TP+TN)/(TP+TN+FP+FN);
+* **Precisão**: quantas das observaçoes preditas como positivas são realmente positivas. TP/(TP+FP);
+* **Recall**: quantas observaçoes positivas foram corretamente classificadas. TP/(TP+FN).
 
 
 ```{r}
@@ -196,16 +186,15 @@ print(paste('Precision', TP / (TP + FP)))
 print(paste('Recall', TP / (TP + FN)))
 ```
 
-###Controle overfitting usando validação-cruzada
+###6.Controle overfitting usando validação-cruzada
 
-Regressão Logistica
+<b>Regressão Logistica</b>
 
-Ridge
+<b>Ridge</b>
 
 O modelo de regressão para Ridge ajustado utiliza a função glmnet com alpha igual a 0. Temos que quando o lambda é 4, todos os coeficiente são zero. Então, à medida que variamos lambda, os coeficiente crescem distanciando de zero.
 
 ```{r}
-library(glmnet)
 set.seed(123)
 
 model.ridge = glmnet(x = model.matrix( ~ . -matricula -evadiu, train.data),
@@ -223,7 +212,7 @@ cv.ridge = cv.glmnet(model.matrix( ~ . -matricula -evadiu, train.data), y=train.
 plot(cv.ridge, sub = T)
 ```
 
-Lasso
+<b>Lasso</b>
 
 O modelo de regressão para lasso é ajustado chamando a função glmnet com alpha igual a 1.
 ```{r}
@@ -261,7 +250,7 @@ plot(cv.lasso)
 
 Assim como em ridge, realizamos o processo para visualização da validação cruzada.
 
-Árvore de decisão
+<b>Árvore de decisão</b>
 
 Para a árvore de decisões irei utilizar o valor máximo de altura 30. Este é o valor máximo recomendado pela documentação do pacote que utilizarei (rpart).
 
@@ -285,7 +274,7 @@ best.tree<- prune(decision.tree.fit,
 
 ```
 
-Melhor modelo de regressão logística
+<b>Melhor modelo de regressão logística</b>
 
 ```{r}
 set.seed(123)
@@ -300,9 +289,9 @@ best.glm.model = model.lasso = train(evadiu ~  P1,
                    na.action = na.omit)
 ```
 
-###Acurácia, precision e recall da validação-cruzada e teste
+###7.Acurácia, precision e recall da validação-cruzada e teste
 
-Regressão Logística
+<b>Regressão Logística</b>
 
 ```{r}
 test.data$best.glm.prediction = predict(best.glm.model, test.data)
@@ -321,7 +310,7 @@ print(paste('Recall:', TP / (TP + FN)))
 Para o modelo que considera somente as variáveis cujos coeficientes não foram zerados na regularização. Temos que a acurácia permaneceu a mesma (94%), porém o recall aumentou um pouco (de 52% para 58.8%). Isso significa que esse novo modelo conseguiu prever melhor os alunos que evadiram.
 
 
-Árvore de Decisão
+<b>Árvore de Decisão</b>
 
 ```{r}
 best.dt.prediction <- as.data.frame(predict(best.tree, test.data))
@@ -340,11 +329,11 @@ print(paste('Precision', TP / (TP + FP)))
 print(paste('Recall', TP / (TP + FN)))
 ```
 
-Para o modelo de Árvore de decisão utilizando CV
+<b>Para o modelo de Árvore de decisão utilizando CV</b>
 
 Para o modelo de árvore utilizando CV e limite de altura da árvore temos também uma melhoria no recall, que subiu de 41% para 58%. Isso significa que este novo modelo conseguiu prever melhor os alunos que evadiram quando comparado com o modelo antigo.
 
-###Aplicação do melhor modelo
+###8.Aplicação do melhor modelo
 
 O nosso melhor modelo foi o de regressão logística utilizando regularização. Vou utilizá-lo para fazer uma previsão sobre mim.
 
@@ -358,9 +347,7 @@ me.prediction
 Utilizei minha nota na disciplina de P1 e o resultado da predição foi correto, ele mostrou que eu não evadiria após o primeiro período. É importante deixar claro que esse modelo não é tão robusto, visto que ele foi baseado em um conjundo de dados desbalanceados, e nesse caso ele está se baseando apenas em uma única variável para realizar a previsão.
 
 
-###Conclusões
+###9.Conclusões
 
 Para obtermos melhores modelos seria necessário que os dados estivessem balanceados e melhorar a forma de inputação, visto que estamos realizando essa inserção dos dados de uma forma arbitrária. Para balancear os dados isso poderíamos utilizar as técnicas disponíveis, como por exemplo Undersampling, Oversampling, Synthetic Data Generation, Cost Sensitive Learning e utliziar uma inputação mais precisa. 
-
-
 
