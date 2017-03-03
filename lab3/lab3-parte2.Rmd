@@ -17,6 +17,7 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(reshape2)
+library(caret)
 ```
 
 Lendo os dados
@@ -33,14 +34,12 @@ reprovacoes <- function(medias) {
   return(length(temp))
 }
 
-#substituindo NAs
-dados <- dados %>%
-  filter(!is.na(Media_Final))
-  
-
 dados <- dados %>%
   group_by(Matricula) %>%
   mutate(num_reprovacoes = reprovacoes(medias = Media_Final))
+
+dados <- dados %>%
+  filter(!is.na(Media_Final))
 
 dados <- dados %>%
   group_by(Matricula, Disciplina) %>%
@@ -53,6 +52,42 @@ dados <- dados %>%
  colnames(dados) <- c("matricula", "evadiu", "ano", "num_reprovacoes","Vetorial", "C1", "IC", "LP1", "LPT", "P1")
 
 ```
+
+Imputação dos dados, ao analisar os dados observamos um número significativos de NAs nas notas das disciplinas, por isso optamos em realizar a inputação dos dados manualmente. Separamos as disciplinas por departamentos e por exemplo, se a média de vetorial estiver faltando, colocaremos a média de cálculo 1 o mesmo caso contrário. O mesmo fizemos para P1 e LP1, nos casos de IC e LPT usamos a média das demais disciplinas.
+
+```{r}
+#imputando os dados
+dados <- dados %>%
+  mutate(Vetorial = ifelse(is.na(Vetorial),
+                            ifelse(is.na(C1),
+                                   0.0,
+                                   C1),
+                            Vetorial),
+        C1 = ifelse(is.na(C1),
+                            ifelse(is.na(Vetorial),
+                                   0.0,
+                                   Vetorial),
+                            C1),
+        LP1 = ifelse(is.na(LP1),
+                            ifelse(is.na(P1),
+                                   0.0,
+                                   P1),
+                            LP1),
+        P1 = ifelse(is.na(P1),
+                            ifelse(is.na(LP1),
+                                   0.0,
+                                   LP1),
+                            P1),
+        IC = ifelse(is.na(IC),
+                    round(mean(c(Vetorial, C1, LP1, P1)), 2),
+                    IC),
+        LPT = ifelse(is.na(LPT),
+                    round(mean(c(Vetorial, C1, LP1, P1)), 2),
+                    LPT)
+        )
+
+```
+
 
 <!-- TODO --> 
 <!-- 1. Separe os dados em treino e teste; -->
@@ -67,13 +102,265 @@ dados <- dados %>%
 <!-- 8. Reporte acurácia, precision e recall da validação-cruzada e teste (para os melhores modelos); -->
 <!-- 9. Aplique o melhor modelo a você mesmo(a) usando seu histórico e reporte a predição e resultado. -->
 
-Separando dados em treino e teste
-```{r}
-treino <- dados %>%
-  filter(ano >= 2009 & ano <= 2014)
+###Separando dados em treino e teste
+Optamos por dividir os dados em treino e teste, observamos que a partir de 2011 temos um aumento considerável no número de matrículas, isso devido aos incentivos do governo em facilitar a entrada dos alunos na universidade, por isso os dados de treino são equivalentes aos anos de 2011 e 2014 e os de teste ao ano de 2015. 
 
-teste <- dados %>% 
+```{r}
+train.data <- dados %>%
+  filter(ano >= 2011 & ano <= 2014) 
+
+test.data <- dados %>% 
   filter(ano == 2015)
 
+train.data$evadiu = as.factor(train.data$evadiu)
+test.data$evadiu = as.factor(test.data$evadiu)
+
 ```
+
+###Treino - Modelos de regressão logística
+```{r}
+model.gml = train(evadiu ~. -matricula,
+                   data=train.data,
+                   method="glm",
+                   family="binomial",
+                   na.action=na.omit)
+
+```
+
+###Treino - Modelos de árvore de decisão
+```{r}
+library("rpart")
+decision.tree.fit <- rpart(evadiu ~ . -matricula, data=train.data)
+```
+
+###Interpretação de coeficientes da regressão
+```{r}
+summary(model.gml)
+```
+Ao analisar os coeficientes do nosso modelo, as variáveis mais significativas são LPT e o nosso atributo criado num_reprovações. Porém essas variáveis apresentam os menores p-valores, o que não faz muito sentido, acreditamos que essa importância que o modelo mostrou seja resultado da imputação dos dados.
+
+
+###Acurácia, precision e recall no treino e teste
+
+TP: true-positive;
+TN: true-negative;
+FP: false-positive;
+FN: false-negative.
+
+Acurácia: proporção de observações corretamente classificadas. (TP+TN)/(TP+TN+FP+FN);
+
+Precisão: quantas das observaçoes preditas como positivas são realmente positivas. TP/(TP+FP);
+Recall: quantas observaçoes positivas foram corretamente classificadas. TP/(TP+FN).
+
+
+```{r}
+test.data$glm.prediction <- predict(model.gml, test.data)
+temp <- test.data %>% select(evadiu, glm.prediction)
+
+TP <- temp %>% filter(evadiu == TRUE, glm.prediction == TRUE) %>% nrow()
+TN <- temp %>% filter(evadiu == FALSE, glm.prediction == FALSE) %>% nrow()
+FP <- temp %>% filter(evadiu == FALSE, glm.prediction == TRUE) %>% nrow() 
+FN <- temp %>% filter(evadiu == TRUE, glm.prediction == FALSE) %>% nrow()
+```
+
+Analisando as métricas temos uma acurácia de 0.93, precisão de 0.67 e recall de 0.588. Nosso modelo apresentou uma boa acurácia, cerca de 93% das previsões estão corretas, mas as outras métricas não foram tão boas assim. A precisão nos diz que 33% das vezes o modelo previu que o aluno ia evadir, mas isso não aconteceu e o recall nos diz que o modelo só conseguiu prever 58% dos alunos que evadiram. Como já vimos, as classes estão desbalanceadas e por isso a acurácia não é confiante.
+
+
+```{r, echo=FALSE}
+print(paste('Accuracy', (TP + TN)/(TP+TN+FP+FN)))
+print(paste('Precision', TP / (TP + FP)))
+print(paste('Recall', TP / (TP + FN)))
+```
+
+Vamos analisar essa métricas para o modelo de arvore de decisão.
+
+```{r}
+dt.prediction <- as.data.frame(predict(decision.tree.fit, test.data))
+temp <- apply(dt.prediction['TRUE'], 2, FUN = function(x){return(x > 0.5)})
+test.data$dt.prediction <- as.factor(temp)
+
+temp <- test.data %>% select(evadiu, dt.prediction)
+
+TP <- temp %>% filter(evadiu == TRUE, dt.prediction == TRUE) %>% nrow()
+TN <- temp %>% filter(evadiu == FALSE, dt.prediction == FALSE) %>% nrow()
+FP <- temp %>% filter(evadiu == FALSE, dt.prediction == TRUE) %>% nrow() 
+FN <- temp %>% filter(evadiu == TRUE, dt.prediction == FALSE) %>% nrow()
+```
+
+
+Para o modelo de árvore de decisão vemos que as métricas são semelhantes com as que foram obtidas antes, porém  o recall foi menor 0.823, o que nos diz que o modelo de regressão logística conseguiu prever melhor os alunos que deixaram o curso.
+
+```{r, echo=FALSE}
+print(paste('Accuracy', (TP + TN)/(TP+TN+FP+FN)))
+print(paste('Precision', TP / (TP + FP)))
+print(paste('Recall', TP / (TP + FN)))
+```
+
+###Controle overfitting usando validação-cruzada
+
+Regressão Logistica
+
+Ridge
+
+O modelo de regressão para Ridge ajustado utiliza a função glmnet com alpha igual a 0. Temos que quando o lambda é 4, todos os coeficiente são zero. Então, à medida que variamos lambda, os coeficiente crescem distanciando de zero.
+
+```{r}
+library(glmnet)
+set.seed(123)
+
+model.ridge = glmnet(x = model.matrix( ~ . -matricula -evadiu, train.data),
+                y = train.data$evadiu,
+                alpha = 0,
+                family = 'binomial')
+
+plot(model.ridge, xvar = "lambda", label = T)
+
+```
+
+```{r}
+cv.ridge = cv.glmnet(model.matrix( ~ . -matricula -evadiu, train.data), y=train.data$evadiu, alpha=0, family="binomial")
+
+plot(cv.ridge, sub = T)
+```
+
+Lasso
+
+O modelo de regressão para lasso é ajustado chamando a função glmnet com alpha igual a 1.
+```{r}
+set.seed(123)
+
+model.lasso = glmnet(x = model.matrix( ~ . -matricula -evadiu, train.data),
+                y = train.data$evadiu,
+                alpha = 1,
+                family = 'binomial')
+
+plot(model.lasso, xvar = "lambda", label = T)
+
+```
+
+O plot tem várias opções, o desvio, por exemplo, está relacionado fraction deviance explained, que é equivalente a r-quadrado em regressão. Notamos que muito do r-quadrado foi explicado por basicamente duas variáveis, representadas pelas cores verde e azul claro.
+
+```{r}
+plot(model.lasso,xvar="dev",label=TRUE)
+```
+
+
+Coeficientes podem ser extraídos do glmmod. Aqui mostrado com 2 variáveis selecionadas. sendo elas Introdução.à.Computação e Leitura.e.Produção.de.Textos. Decidimos então que o melhor modelo para regressão logística será composto apenas por essas duas variáveis intependentes.
+
+
+```{r}
+coef(model.lasso)[,10]
+
+cv.lasso = cv.glmnet(model.matrix( ~ . -matricula -evadiu, train.data), 
+                     y=train.data$evadiu, 
+                     alpha=1, 
+                     family="binomial")
+plot(cv.lasso)
+
+```
+
+Assim como em ridge, realizamos o processo para visualização da validação cruzada.
+
+Árvore de decisão
+
+Para a árvore de decisões irei utilizar o valor máximo de altura 30. Este é o valor máximo recomendado pela documentação do pacote que utilizarei (rpart).
+
+```{r}
+#Valor máximo da altura da árvore 30
+dt.control=rpart.control(maxdepth=30)
+
+decision.tree.fit <- rpart(evadiu ~ . -matricula,
+                           data=train.data,
+                           method="class",
+                           control=dt.control)
+
+printcp(decision.tree.fit)
+
+```
+
+```{r}
+#Árvore com menor erro
+best.tree<- prune(decision.tree.fit,
+ + decision.tree.fit$cptable[which.min(decision.tree.fit$cptable[,"xerror"]),"CP"])
+
+```
+
+Melhor modelo de regressão logística
+
+```{r}
+set.seed(123)
+
+fitControl = trainControl(method = "cv", number = 10)
+best.glm.model = model.lasso = train(evadiu ~  P1,
+                   data=train.data,
+                   method="glm",
+                   family="binomial",
+                   preProcess = c('scale', 'center'),
+                   trControl = fitControl,
+                   na.action = na.omit)
+```
+
+###Acurácia, precision e recall da validação-cruzada e teste
+
+Regressão Logística
+
+```{r}
+test.data$best.glm.prediction = predict(best.glm.model, test.data)
+temp = test.data %>% select(evadiu, best.glm.prediction)
+
+TP = subset(temp, evadiu == TRUE & best.glm.prediction == TRUE) %>% nrow()
+TN = subset(temp, evadiu == FALSE & best.glm.prediction == FALSE) %>% nrow()
+FP = subset(temp, evadiu == FALSE & best.glm.prediction == TRUE) %>% nrow() 
+FN = subset(temp, evadiu == TRUE & best.glm.prediction == FALSE) %>% nrow()
+
+print(paste('Acurácia:', (TP + TN)/(TP+TN+FP+FN)))
+print(paste('Precisão:', TP / (TP + FP)))
+print(paste('Recall:', TP / (TP + FN)))
+```
+
+Para o modelo que considera somente as variáveis cujos coeficientes não foram zerados na regularização. Temos que a acurácia permaneceu a mesma (94%), porém o recall aumentou um pouco (de 52% para 58.8%). Isso significa que esse novo modelo conseguiu prever melhor os alunos que evadiram.
+
+
+Árvore de Decisão
+
+```{r}
+best.dt.prediction <- as.data.frame(predict(best.tree, test.data))
+temp <- apply(best.dt.prediction['TRUE'], 2, FUN = function(x){return(x > 0.5)})
+test.data$best.dt.prediction <- as.factor(temp)
+
+temp <- test.data %>% select(evadiu, best.dt.prediction)
+
+TP <- temp %>% filter(evadiu == TRUE, best.dt.prediction == TRUE) %>% nrow()
+TN <- temp %>% filter(evadiu == FALSE, best.dt.prediction == FALSE) %>% nrow()
+FP <- temp %>% filter(evadiu == FALSE, best.dt.prediction == TRUE) %>% nrow() 
+FN <- temp %>% filter(evadiu == TRUE, best.dt.prediction == FALSE) %>% nrow()
+
+print(paste('Accuracy', (TP + TN)/(TP+TN+FP+FN)))
+print(paste('Precision', TP / (TP + FP)))
+print(paste('Recall', TP / (TP + FN)))
+```
+
+Para o modelo de Árvore de decisão utilizando CV
+
+Para o modelo de árvore utilizando CV e limite de altura da árvore temos também uma melhoria no recall, que subiu de 41% para 58%. Isso significa que este novo modelo conseguiu prever melhor os alunos que evadiram quando comparado com o modelo antigo.
+
+###Aplicação do melhor modelo
+
+O nosso melhor modelo foi o de regressão logística utilizando regularização. Vou utilizá-lo para fazer uma previsão sobre mim.
+
+```{r}
+me.data <- data.frame(P1 = 9.8)
+
+me.prediction <- predict(best.glm.model, me.data)
+me.prediction
+```
+
+Utilizei minha nota na disciplina de P1 e o resultado da predição foi correto, ele mostrou que eu não evadiria após o primeiro período. É importante deixar claro que esse modelo não é tão robusto, visto que ele foi baseado em um conjundo de dados desbalanceados, e nesse caso ele está se baseando apenas em uma única variável para realizar a previsão.
+
+
+###Conclusões
+
+Para obtermos melhores modelos seria necessário que os dados estivessem balanceados e melhorar a forma de inputação, visto que estamos realizando essa inserção dos dados de uma forma arbitrária. Para balancear os dados isso poderíamos utilizar as técnicas disponíveis, como por exemplo Undersampling, Oversampling, Synthetic Data Generation, Cost Sensitive Learning e utliziar uma inputação mais precisa. 
+
+
 
