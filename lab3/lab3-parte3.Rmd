@@ -1,0 +1,21 @@
+---
+title: "Parte 2: Prevendo Evasão"
+author: "Arthur Lustosa"
+date: "8 de março de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#dados do keagle
+
+train.data <- read.csv(file("dados/lab3_kaggle_classificacao_treino.csv", encoding = "8"))
+test.data <- read.csv("dados/lab3_kaggle_classificacao_teste.csv")
+example <- read.csv("dados/lab3_kaggle_classificacao_sample_submissao.csv")
+```
+
+
+
+```{r}
+
+```
+
