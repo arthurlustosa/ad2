@@ -1,0 +1,35 @@
+---
+title: "Predição"
+author: "Arthur Lustosa"
+date: "20 de março de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+
+#biblioteca de filtragem colaborativa
+```
+
+
+
+```{r cars}
+#recebendo os dados
+data <- read.csv("data/lab4_part1_data.csv")
+
+#renomeando colunas
+COL_NAMES <- c("matricula", "ano", "periodo", "Linear", "Vetorial", "C1", "C2", "ES", "EDA", "Fisica_Classica", "Física_Moderna", "GI", "IC", "LEDA", "LOAC", "LP1", "LP2", "LPT", "Logica", "Discreta", "Metodos", "OAC", "PLP", "Prob", "P1", "P2", "SI1", "TC", "Grafos");
+
+#separando disciplinas do quarto periodo
+P4_DISCIPLINAS <- c("Metodos", "PLP", "Logica", "OAC", "ES", "SI1", "LOAC")
+
+#renomeando colunas 
+colnames(dados) <- COL_NAMES
+#removendo NAs
+dados <- na.omit(data)
+
+#separando treino e teste
+#treino: todas
+#teste: até p terceiro
+
+```
